@@ -9,7 +9,7 @@ use Data::Postponed::Forever;
 use Data::Postponed::Once;
 use Data::Postponed::OnceOnly;
 
-$VERSION = '0.02';
+$VERSION = '0.03';
 
 BEGIN {
     for my $flag ( [ SVf_READONLY => 0x00800000 ],

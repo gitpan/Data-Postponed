@@ -3,7 +3,11 @@ Revision history for Data-Postponed
 0.01    Somewhere around the middle of March, 2005.
         First version, released on an unsuspecting world as Time-Traveler.
 
-0.02    Mar 27, 2005
+0.02    Mar 30, 2005
         Renamed to Data-Postponed, rewrote the entire thing and wrote
         tests for nearly everything.
+
+0.03    Mar 30, 2005
+        Added MANIFEST.SKIP to MANIFEST.
+        Removed MANIFEST.SKIP from MANIFEST.
 

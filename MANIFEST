@@ -4,7 +4,8 @@ lib/Data/Postponed/Forever.pm
 lib/Data/Postponed/Once.pm
 lib/Data/Postponed/OnceOnly.pm
 Makefile.PL
-MANIFEST			This list of files
+MANIFEST
+MANIFEST.SKIP
 META.yml
 README
 SIGNATURE
