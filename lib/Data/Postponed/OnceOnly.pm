@@ -2,6 +2,7 @@ package Data::Postponed::OnceOnly;
 use strict;
 use vars ( '@ISA' );
 
+
 @ISA = 'Data::Postponed';
 
 sub new {
@@ -17,6 +18,7 @@ sub DESTROY {} # Don't bother AUTOLOADing this
 #  defined &Internals::SetReadOnly ? \ &Internals::SetReadOnly :
 #  defined &Internals::SvREADONLY ? sub { Internals::SvREADONLY( $_[0], 1 ) } :
 #  undef;
+
 
 for my $context ( split ' ', $overload::ops{conversion} ) {
     no strict 'refs';
@@ -70,6 +72,7 @@ for my $context ( split ' ', $overload::ops{conversion} ) {
     };
 }
 
+
 package Data::Postponed::_ReadOnly::Scalar;
 use strict;
 use Carp 'croak';
@@ -89,7 +92,9 @@ use Carp 'croak';
 sub TIEARRAY { bless [ @_[ 1 .. $#_ ] ], $_[0] }
 sub FETCH { $_[0][$_[1]] }
 sub FETCHSIZE { 0 + @{$_[0]} }
-sub EXISTS { exists $_[0][$_[1]] }
+if ( $] >= 5.006 ) {
+    eval q[ sub EXISTS { exists $_[0][$_[1]] }; 1 ];
+}
 sub DESTROY {} # Nothing special.
 
 for my $method ( qw( STORE STORESIZE EXTEND DELETE CLEAR PUSH POP SHIFT UNSHIFT SPLICE ) ) {

@@ -1,32 +1,43 @@
 package Data::Postponed;
 use strict;
 use vars qw( $VERSION $DEBUG @ISA @EXPORT_OK );
+use B qw( svref_2object );
 use overload (); # to be imported later
-use B ( 'svref_2object' );
-use Carp ( 'croak' );
+use Carp qw( croak );
 use Exporter;
 use Data::Postponed::Forever;
 use Data::Postponed::Once;
 use Data::Postponed::OnceOnly;
 
-$VERSION = '0.05';
+$VERSION = 0.06;
 
 BEGIN {
-    for my $flag ( [ SVf_READONLY => 0x00800000 ],
-		   [ SVf_FAKE =>     0x00100000 ],
-		   [ SVs_TEMP =>     0x00000800 ],
-		   [ SVs_PADTMP =>   0x00000200 ] ) {
-	if ( grep $flag->[0] eq $_, @B::EXPORT_OK ) {
-	    B->import( $flag->[0] );
+    # Separate out which constants can be imported from B or which
+    # ones I have to "invent" on the spot.
+    my @manual;
+    my @import;
+    for my $constant ( [ SVf_READONLY => 0x00800000 ],
+		       [ SVf_FAKE =>     0x00100000 ],
+		       [ SVs_TEMP =>     0x00000800 ],
+		       [ SVs_PADTMP =>   0x00000200 ] ) {
+	if ( grep $constant->[0] eq $_, @B::EXPORT_OK ) {
+            push @import, $constant->[0];
 	}
-	else {
-	    eval "sub $flag->[0] () { $flag->[1] }"
+ 	else {
+            push @manual, $constant;
 	}
-	#	eval { B->import( $_->[0] ) }
-#	  or eval "sub () $_->[0] { $_->[1] }"
-#	    or die "Couldn't create $_->[0]: $@";
     }
-}
+
+    # This stuff is ok to import.
+    if ( @import ) {
+	B->import( @import );
+    }
+    
+    for my $constant ( @manual ) {
+	eval "sub $constant->[0] () { $constant->[1] }; 1"
+	  or die $@;
+    }
+};
 
 ######################################################################
 #		 Function exports and OO composition

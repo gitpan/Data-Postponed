@@ -27,3 +27,9 @@ Revision history for Data-Postponed
   - Moved Data::Postponed::_ReadOnly::Scalar back into ::OnceOnly and deleted
     Data::Postponed::_ReadOnly::Array.
 
+0.06    Mar 31, 2005
+  - Fixed 5.005.04 parser bug in Data::Postponed::OnceOnly. Now,
+    EXISTS() is only compiled for high enough interpreters. Even
+    attempting to parse this breaks perl's parser and strange errors
+    result otherwise.
+

@@ -14,15 +14,15 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 cc9cd83ddfdf9d821b63d1ccb75b6ae9e12b60eb Changes
+SHA1 d31f88423b0871f32f5c1110f28d3b6361cc69b4 Changes
 SHA1 d4d40ae4277896c79461c1723beb9c6d31bbe345 MANIFEST
-SHA1 2d3c0cfc4aee469140e818a8d279732212b3188b META.yml
+SHA1 21223fd05978be02ea63dd86dc942a419fa93046 META.yml
 SHA1 45f9db9671647e5f5bdde3e6b1f479587d3e57a0 Makefile.PL
 SHA1 38407a90eac9aae4dcf7c1d0d17d449501b958f5 README
-SHA1 3668751f43a4b90af9ceadfd9e23939528f293f4 lib/Data/Postponed.pm
+SHA1 9c235d442873686312ec27198334cbc640f16531 lib/Data/Postponed.pm
 SHA1 c0901d61c1c0b6164dcc4c80cd5a38e0367784a0 lib/Data/Postponed/Forever.pm
 SHA1 f2bc0e43c87f245711b502aad254cf273cb3574a lib/Data/Postponed/Once.pm
-SHA1 0b4a8e5c0bc6e7b14e59f3bc921490b422a08e79 lib/Data/Postponed/OnceOnly.pm
+SHA1 6ef26ddc22de5fa395dc1250eaa4ad8b8ca6e222 lib/Data/Postponed/OnceOnly.pm
 SHA1 c28e9e954c55444737778fa1358890293d39a4cc t/00signature.t
 SHA1 0190346d7072d458c8a10a45c19f86db641dcc48 t/01pod.t
 SHA1 655a38797b07a143cf9fe4d8bfa6d210325da5ba t/02pod-coverage.t
@@ -34,7 +34,7 @@ SHA1 a5d258ac6873cc48cda872b8b197f8b596b425ef t/14const_t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.2.5 (GNU/Linux)
 
-iD8DBQFCS0Jyejb/5debeXcRArODAJ4naZi7Gkl0ohaYZp6iw+uEd4UYGgCcCKWO
-550t6jh3ihXxNB8fqD3m+ig=
-=bZD+
+iD8DBQFCS5hHejb/5debeXcRAuYoAKDHXWlA6lknvgzmAn75nNmyhU8vLwCfeKwu
+C7INhOUiM5FtWXdCv2nwPxU=
+=rvFy
 -----END PGP SIGNATURE-----
