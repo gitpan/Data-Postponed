@@ -1,7 +1,8 @@
 use Test::More;
 BEGIN {
     eval {
-        use Test::Signature;
+        require Test::Signature;
+        Test::Signature->import();
         plan( tests => 1 );
         $test = 1;
     }

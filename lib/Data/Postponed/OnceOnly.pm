@@ -1,6 +1,7 @@
 package Data::Postponed::OnceOnly;
 use strict;
 use vars ( '@ISA' );
+use Data::Postponed::_ReadOnly::Scalar;
 
 @ISA = 'Data::Postponed';
 
@@ -8,6 +9,8 @@ sub new {
     bless [ Data::Postponed::_ByValueOrReference( $_[1] ) ],
       $_[0];
 }
+
+sub DESTROY {} # Don't bother AUTOLOADing this
 
 # Attempt to use the 5.8.x Internals::SetReadOnly function and fail
 # over to a tie()'d function if that isn't available.
@@ -67,34 +70,6 @@ for my $context ( split ' ', $overload::ops{conversion} ) {
 	return $_[0] = $value;
     };
 }
-
-package Data::Postponed::_ReadOnly::Scalar;
-use strict;
-use Carp 'croak';
-
-sub TIESCALAR {
-    my $val = $_[1];
-    bless \ $val, $_[0];
-}
-sub FETCH { ${shift()} }
-sub STORE { croak( "Modification of a read-only value attempted" ) }
-sub DESTROY {} # Nothing special.
-
-# package Data::Postponed::_ReadOnly::Array;
-# use strict;
-# use Carp 'croak';
-
-# sub TIEARRAY { bless [ @_[ 1 .. $#_ ] ], $_[0] }
-# sub FETCH { $_[0][$_[1]] }
-# sub FETCHSIZE { 0 + @{$_[0]} }
-# sub EXISTS { exists $_[0][$_[1]] }
-# sub DESTROY {} # Nothing special.
-
-# for my $method ( qw( STORE STORESIZE EXTEND DELETE CLEAR PUSH POP SHIFT UNSHIFT SPLICE ) ) {
-#     no strict 'refs';
-#     *$method = sub { croak( "Modification of a read-only value attempted" ) };
-# }
-
 
 1;
 

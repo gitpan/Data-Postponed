@@ -1,11 +1,12 @@
 Changes
 lib/Data/Postponed.pm
+lib/Data/Postponed/_ReadOnly/Array.pm
+lib/Data/Postponed/_ReadOnly/Scalar.pm
 lib/Data/Postponed/Forever.pm
 lib/Data/Postponed/Once.pm
 lib/Data/Postponed/OnceOnly.pm
 Makefile.PL
-MANIFEST
-MANIFEST.SKIP
+MANIFEST			This list of files
 META.yml
 README
 SIGNATURE

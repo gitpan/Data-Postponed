@@ -1,6 +1,5 @@
 package Data::Postponed::Once;
 use strict;
-use Data::Postponed;
 use vars ( '@ISA' );
 
 @ISA = 'Data::Postponed';
@@ -9,6 +8,8 @@ sub new {
     bless [ Data::Postponed::_ByValueOrReference( $_[1] ) ],
       $_[0];
 }
+
+sub DESTROY {} # Don't bother AUTOLOADing this
 
 for my $context ( split ' ', $overload::ops{conversion} ) {
     no strict 'refs';
@@ -28,7 +29,7 @@ __END__
 
 =head1 NAME
 
-Data::Postponed::SemiStrict - Delayed evaluation expressions are "collapsed" once observed
+Data::Postponed::Once - Delayed evaluation expressions are "collapsed" once observed
 
 =head1 SYNOPSIS
 

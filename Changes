@@ -1,13 +1,23 @@
 Revision history for Data-Postponed
 
 0.01    Somewhere around the middle of March, 2005.
-        First version, released on an unsuspecting world as Time-Traveler.
+  - First version, released on an unsuspecting world as Time-Traveler.
 
 0.02    Mar 30, 2005
-        Renamed to Data-Postponed, rewrote the entire thing and wrote
-        tests for nearly everything.
+  - Renamed to Data-Postponed, rewrote the entire thing and wrote
+    tests for nearly everything.
 
 0.03    Mar 30, 2005
-        Added MANIFEST.SKIP to MANIFEST.
+  - Added MANIFEST.SKIP to MANIFEST.
         Removed MANIFEST.SKIP from MANIFEST.
+
+0.04    Mar 30, 2005
+  - Fixed POD bug in Data::Postponed::Once. It was still named
+    Data::Postponed::SemiStrict.
+  - Split Data::Postponed::_ReadOnly::Array and ::Scalar off into
+    separate files so search.cpan.org will render
+    Data::Postpone::OnceOnly.pm's POD correctly.
+  - Updated META.yml
+  - Added DESTROY methods to all classes so it won't be
+    AUTOLOADed. This is just a performance micro-optimization.
 

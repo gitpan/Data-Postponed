@@ -15,5 +15,6 @@ WriteMakefile
 		 'B' => 0,
 		 'Carp' => 0,
 		 'Exporter' => 0,
+                 'Test::More' => 0,
 		},
 );

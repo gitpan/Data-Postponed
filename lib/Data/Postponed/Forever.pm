@@ -6,6 +6,8 @@ use vars ( '@ISA' );
 
 sub new { bless [ Data::Postponed::_ByValueOrReference( $_[1] ) ], $_[0] }
 
+sub DESTROY {} # Don't bother AUTOLOADing this
+
 1;
 
 __END__

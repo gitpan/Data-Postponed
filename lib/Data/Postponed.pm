@@ -2,20 +2,20 @@ package Data::Postponed;
 use strict;
 use vars qw( $VERSION $DEBUG @ISA @EXPORT_OK );
 use overload (); # to be imported later
-use B 'svref_2object';
-use Carp 'croak';
+use B ( 'svref_2object' );
+use Carp ( 'croak' );
 use Exporter;
 use Data::Postponed::Forever;
 use Data::Postponed::Once;
 use Data::Postponed::OnceOnly;
 
-$VERSION = '0.03';
+$VERSION = '0.04';
 
 BEGIN {
     for my $flag ( [ SVf_READONLY => 0x00800000 ],
-		   [ SVf_FAKE => 0x00100000 ],
-		   [ SVs_TEMP => 0x00000800 ],
-		   [ SVs_PADTMP => 0x00000200 ] ) {
+		   [ SVf_FAKE =>     0x00100000 ],
+		   [ SVs_TEMP =>     0x00000800 ],
+		   [ SVs_PADTMP =>   0x00000200 ] ) {
 	if ( grep $flag->[0] eq $_, @B::EXPORT_OK ) {
 	    B->import( $flag->[0] );
 	}
@@ -92,6 +92,7 @@ overload->import
    map( { ( $_ ) x 2 }
 	map split( ' ' ),
 	'=',
+	grep defined(),
 	@overload::ops{( 'with_assign',
 			 'assign',
 			 'num_comparison',
@@ -102,7 +103,7 @@ overload->import
 			 'mutators',
 			 'func',
 			 'conversion',
-			 'iterators',
+			 'iterators', # Doesn't exist in 5.005.04
 			 # 'dereferencing',
 			 # 'special'
 		       )} ),
@@ -217,6 +218,7 @@ for my $operation ( split( ' ', $overload::ops{mutators} ) ) {
 # Non assignment unary operations
 for my $operation ( qw( cos sin exp abs log int sqrt ),
 		    map split( ' ' ),
+		    grep defined(), # iterators doesn't exist on 5.005.04
 		    @overload::ops{( 'unary',
 				     'iterators' )} ) {
     no strict 'refs';
