@@ -3,6 +3,9 @@ NAME
     facto changes to input variables
 
 SYNOPSIS
+    Postponing changes with postpone()
+
+     use Data::Postpone 'postpone';
      %functions = ( foobar => 'foo' );
  
      $code = "sub " . postpone( $functions{foobar} ) . " { return time }";
@@ -13,6 +16,39 @@ SYNOPSIS
  
      # Will throw an error because 'foobar' can't be renamed anymore.
      $functions{foobar} = 'baz';
+
+    Postponing changes with postpone_once()
+
+     use Data::Postpone 'postpone_once';
+ 
+     %functions = ( foobar => 'foo' );
+ 
+     $code = "sub " . postpone_once( $functions{foobar} ) . " { return time }";
+     $functions{foobar} = "baz";
+ 
+     # Reflects the new name of 'bar' instead of 'foo'. $code isn't
+     # overloaded anymore.
+     print $code;
+ 
+     # The change to $functions{foobar} is no longer reflected in $code
+     $functions{foobar} = "quux";
+     print $code;
+
+    Postponing changes with postpone_forever()
+
+     use Data::Postpone 'postpone_forever';
+ 
+     %functions = ( foobar => 'foo' );
+ 
+     $code = "sub " . postpone_forever( $functions{foobar} ) . " { return time }";
+     $functions{foobar} = "baz";
+ 
+     # Reflects the new name of 'bar' instead of 'foo';
+     print $code;
+ 
+     # Continues to reflect changes to the input variables
+     $functions{foobar} = "quux";
+     print $code;
 
 DESCRIPTION
     This module allows you to delay the computation of values, usually so

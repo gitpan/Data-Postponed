@@ -1,7 +1,6 @@
 package Data::Postponed::OnceOnly;
 use strict;
 use vars ( '@ISA' );
-use Data::Postponed::_ReadOnly::Scalar;
 
 @ISA = 'Data::Postponed';
 
@@ -71,13 +70,40 @@ for my $context ( split ' ', $overload::ops{conversion} ) {
     };
 }
 
+package Data::Postponed::_ReadOnly::Scalar;
+use strict;
+use Carp 'croak';
+
+sub TIESCALAR {
+    my $val = $_[1];
+    bless \ $val, $_[0];
+}
+sub FETCH { ${shift()} }
+sub STORE { croak( "Modification of a read-only value attempted" ) }
+sub DESTROY {} # Nothing special.
+
+package Data::Postponed::_ReadOnly::Array;
+use strict;
+use Carp 'croak';
+
+sub TIEARRAY { bless [ @_[ 1 .. $#_ ] ], $_[0] }
+sub FETCH { $_[0][$_[1]] }
+sub FETCHSIZE { 0 + @{$_[0]} }
+sub EXISTS { exists $_[0][$_[1]] }
+sub DESTROY {} # Nothing special.
+
+for my $method ( qw( STORE STORESIZE EXTEND DELETE CLEAR PUSH POP SHIFT UNSHIFT SPLICE ) ) {
+    no strict 'refs';
+    *$method = sub { croak( "Modification of a read-only value attempted" ) };
+}
+
 1;
 
 __END__
 
 =head1 NAME
 
-Data::Postponed::Forever - Put off computing a value as long as possible but throw errors if later changes are attempted
+Data::Postponed::OnceOnly - Put off computing a value as long as possible but throw errors if later changes are attempted
 
 =head1 SYNOPSIS
 

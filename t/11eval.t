@@ -1,5 +1,5 @@
 use strict;
-use Test::More tests => 52;
+use Test::More tests => 51;
 use Data::Postponed (
   'postpone', 'postpone_once', 'postpone_forever' );
 
@@ -34,17 +34,18 @@ ok( overload::Overloaded( postpone_once( undef ) ),
 ok( ! eval{ Data::Postponed->new( undef ); 1 },
     'Data::Postponed->new is a virtual method' );
 
-{ # Stealable
-  my $val = 0;
-  $val += time;
-  like( $val, qr/^\d+$/ );
-}
+#{ # Stealable
+#  my $val = postpone_forever *postpone_forever{CODE};
+#  print STDERR $val->[0] . "\n";
+#  exit;
+#  like( $val, qr/^\d+$/, );
+#}
 
 { # Mixed objects
   my $val1 = 100;
   my $val2 = "one hundred";
-  my $expr1 = postpone $val1;
-  my $expr2 = postpone $val2;
+  my $expr1 = postpone_forever $val1;
+  my $expr2 = postpone_forever $val2;
 
   is( $expr1 . $expr2 . $expr1 . $expr2,
       '100one hundred100one hundred' );

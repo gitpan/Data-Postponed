@@ -21,3 +21,9 @@ Revision history for Data-Postponed
   - Added DESTROY methods to all classes so it won't be
     AUTOLOADed. This is just a performance micro-optimization.
 
+0.05    Mar 30, 2005
+  - Fixed POD bug in Data::Postponed::OnceOnly. It was accidentally
+    named Data::Postponed::Forever.
+  - Moved Data::Postponed::_ReadOnly::Scalar back into ::OnceOnly and deleted
+    Data::Postponed::_ReadOnly::Array.
+

@@ -9,7 +9,7 @@ use Data::Postponed::Forever;
 use Data::Postponed::Once;
 use Data::Postponed::OnceOnly;
 
-$VERSION = '0.04';
+$VERSION = '0.05';
 
 BEGIN {
     for my $flag ( [ SVf_READONLY => 0x00800000 ],
@@ -131,6 +131,8 @@ overload->import
 # that value because if foo() doesn't store it, it will expire.
 
 sub _ByValueOrReference {
+    my $flags = svref_2object( \ $_[0] )->FLAGS;
+    
     if ( ref $_[0] ) {
 	if ( overload::Overloaded( $_[0] )
 	     and $_[0]->isa( __PACKAGE__ ) ) {
@@ -138,6 +140,14 @@ sub _ByValueOrReference {
 	    # clone it.
 	    return \ bless [ @{$_[0]} ], ref $_[0];
 	}
+# 	elsif ( ( SVf_READONLY
+# 		  | SVf_FAKE
+# 		  | SVs_TEMP
+# 		  | SVs_PADTMP ) ) {
+# 	    # I was given a reference but it isn't visible anywhere
+# 	    # else so I don't bother to store it by reference.
+# 	    return $_[0];
+# 	}
 	else {
 	    # A reference. Since I won't know later whether this is my
 	    # reference or something that was passed in, I take a
@@ -432,6 +442,9 @@ facto changes to input variables
 
 =head1 SYNOPSIS
 
+Postponing changes with postpone()
+
+ use Data::Postpone 'postpone';
  %functions = ( foobar => 'foo' );
  
  $code = "sub " . postpone( $functions{foobar} ) . " { return time }";
@@ -442,6 +455,39 @@ facto changes to input variables
  
  # Will throw an error because 'foobar' can't be renamed anymore.
  $functions{foobar} = 'baz';
+
+Postponing changes with postpone_once()
+
+ use Data::Postpone 'postpone_once';
+ 
+ %functions = ( foobar => 'foo' );
+ 
+ $code = "sub " . postpone_once( $functions{foobar} ) . " { return time }";
+ $functions{foobar} = "baz";
+ 
+ # Reflects the new name of 'bar' instead of 'foo'. $code isn't
+ # overloaded anymore.
+ print $code;
+ 
+ # The change to $functions{foobar} is no longer reflected in $code
+ $functions{foobar} = "quux";
+ print $code;
+
+Postponing changes with postpone_forever()
+
+ use Data::Postpone 'postpone_forever';
+ 
+ %functions = ( foobar => 'foo' );
+ 
+ $code = "sub " . postpone_forever( $functions{foobar} ) . " { return time }";
+ $functions{foobar} = "baz";
+ 
+ # Reflects the new name of 'bar' instead of 'foo';
+ print $code;
+ 
+ # Continues to reflect changes to the input variables
+ $functions{foobar} = "quux";
+ print $code;
 
 =head1 DESCRIPTION
 
