@@ -1,0 +1,16 @@
+# http://module-build.sourceforge.net/META-spec.html
+#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
+name:         Data-Postponed
+version:      0.02
+version_from: lib/Data/Postponed.pm
+installdirs:  site
+requires:
+    B:                             0
+    Carp:                          0
+    Exporter:                      0
+    overload:                      0
+    strict:                        0
+    vars:                          0
+
+distribution_type: module
+generated_by: ExtUtils::MakeMaker version 6.17

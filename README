@@ -1,0 +1,118 @@
+NAME
+    Data::Postponed - Delay the evaluation of expressions to allow post
+    facto changes to input variables
+
+SYNOPSIS
+     %functions = ( foobar => 'foo' );
+ 
+     $code = "sub " . postpone( $functions{foobar} ) . " { return time }";
+     $functions{foobar} = "baz";
+ 
+     # Reflects the new name of 'bar' instead of 'foo';
+     print $code;
+ 
+     # Will throw an error because 'foobar' can't be renamed anymore.
+     $functions{foobar} = 'baz';
+
+DESCRIPTION
+    This module allows you to delay the computation of values, usually so
+    you can change your mind about the returned value. Its a sort of time
+    travel.
+
+    The values returned by this module are overloaded objects which can be
+    operated on like numbers, strings, or booleans but aren't actually made
+    "real" until you use them in some context that requires that they be
+    computed first.
+
+    As an aide to debugging and to prevent time paradoxes, the default
+    postpone() function's effect is that once a value has been computed, it
+    ceases to be overloaded and all of the input variables to it are turned
+    read only.
+
+Exportable functions
+    postpone( EXPR )
+    postpone_once( EXPR )
+    postpone_forever( EXPR )
+
+Subclassing Data::Postponed
+  Overloadable methods
+    Data::Postponed::...->new( EXPR )
+        This method must be overridden by a subclass. Data::Postponed comes
+        with three subclasses: Data::Postponed::OnceOnly,
+        Data::Postponed::Once, Data::Postponed::Forever each of which
+        override this method.
+
+        Calling "Data::Postponed-"new( ... )> directly will produce an
+        error.
+
+    $obj->Clone()
+        This method returns a new Data::Postponed object in the same
+        subclass equivalent to the current object. This implements the "="
+        method for overload.
+
+   Conversion operations
+    Each of the methods "bool", "", "0+" may be overridden. The base class
+    implementation evaluates all of the delayed computation with no side
+    effects and returns the computed value. If these methods are not
+    overridden, an overloaded value may be evaluated again in the future and
+    its result may be different.
+
+    The Data::Postponed::Forever subclass does exactly this. No overriding
+    occurs and repeated evaluation of the overloaded value always
+    recalculates the returned value.
+
+    The Data::Postponed::Once subclass overrides the conversion methods so
+    that once the value has been computed, it is finalized and will not be
+    recomputed again in the future.
+
+    The Data::Postponed::OnceOnly subclass is Data::Postponed::Once except
+    that it marks all of its input variables as read only after this
+    finalization has occurred. This provides you with an extra level of
+    security.
+
+    If you have a bug in your code and write to an input variable after the
+    postponed value has already been computed, you will receive an error
+    from perl that you have attempted to write to a read only variable.
+
+   Postponed operations
+    Non-assignment binary operations
+        All of the methods listed in the "with_assign", "num_comparison",
+        "3way_comparison", "str_comparison", "binary" values of the
+        %overload::ops hash. Also, the "atan2" method from "func".
+
+    Non-assignment unary operations
+        The "cos", "sin", "exp", "abs", "log", "sqrt" methods from "func",
+        the "unary", and the "iterators" values of the %overload::ops hash.
+
+    Binary operations with assignment
+        All of the methods listed in the "assign" value of the
+        %overload::ops hash.
+
+    Unary operations with assignment
+        The "mutator" methods from %overload::ops.
+
+SEE ALSO
+    This is really similar to the *Really* symbolic calculator from the
+    overload documentation. This expands on that idea by adding the ::Once
+    and ::OnceOnly subclasses and taking care to be generalized instead of
+    for just arithmetic.
+
+AUTHOR
+    Joshua ben Jore, "<jjore@cpan.org>"
+
+BUGS
+    Please report any bugs or feature requests to
+    "bug-data-postponed@rt.cpan.org", or through the web interface at
+    <http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Data-Postponed>. I will
+    be notified, and then you'll automatically be notified of progress on
+    your bug as I make changes.
+
+ACKNOWLEDGEMENTS
+    Corion of perlmonks.org
+
+COPYRIGHT & LICENSE
+    Copyright 2005 Joshua ben Jore, All Rights Reserved.
+
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
