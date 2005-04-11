@@ -42,11 +42,11 @@ Example using C<postpone_forever()>
 
 Example using the OO
 
- use Data::Postpone;
+ use Data::Postponed;
  
  %functions = ( foobar => 'foo' );
  
- $code = "sub " . Data::Postpone::Forever->new( $functions{foobar} ) . " { return time }";
+ $code = "sub " . Data::Postponed::Forever->new( $functions{foobar} ) . " { return time }";
  $functions{foobar} = "baz";
  
  # Reflects the new name of 'bar' instead of 'foo';

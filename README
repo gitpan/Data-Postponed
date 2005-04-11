@@ -5,7 +5,7 @@ NAME
 SYNOPSIS
     Postponing changes with postpone()
 
-     use Data::Postpone 'postpone';
+     use Data::Postponed 'postpone';
      %functions = ( foobar => 'foo' );
  
      $code = "sub " . postpone( $functions{foobar} ) . " { return time }";
@@ -19,7 +19,7 @@ SYNOPSIS
 
     Postponing changes with postpone_once()
 
-     use Data::Postpone 'postpone_once';
+     use Data::Postponed 'postpone_once';
  
      %functions = ( foobar => 'foo' );
  
@@ -36,7 +36,7 @@ SYNOPSIS
 
     Postponing changes with postpone_forever()
 
-     use Data::Postpone 'postpone_forever';
+     use Data::Postponed 'postpone_forever';
  
      %functions = ( foobar => 'foo' );
  

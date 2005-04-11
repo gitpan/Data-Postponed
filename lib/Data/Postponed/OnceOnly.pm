@@ -114,7 +114,7 @@ Data::Postponed::OnceOnly - Put off computing a value as long as possible but th
 
 Example using C<postpone()>
 
- use Data::Postpone 'postpone';
+ use Data::Postponed 'postpone';
  
  %functions = ( foobar => 'foo' );
  
@@ -133,7 +133,7 @@ Example using C<postpone()>
 
 Example using the OO
 
- use Data::Postpone;
+ use Data::Postponed;
  
  %functions = ( foobar => 'foo' );
  
@@ -178,9 +178,9 @@ Returns a new overloaded object bound to whatever was passed in as the EXPR.
 
 =item C<"">, C<0+>, C<bool>
 
-Each of these methods are overridden from L<Data::Postpone>. If you
+Each of these methods are overridden from L<Data::Postponed>. If you
 wished to only finalize strings, you might just copy the C<""> and
-C<new> methods to your own subclass of L<Data::Postpone>.
+C<new> methods to your own subclass of L<Data::Postponed>.
 
 =back
 

@@ -35,7 +35,7 @@ Data::Postponed::Once - Delayed evaluation expressions are "collapsed" once obse
 
 Example using C<postpone_once()>
 
- use Data::Postpone 'postpone_once';
+ use Data::Postponed 'postpone_once';
  
  %functions = ( foobar => 'foo' );
  
@@ -52,11 +52,11 @@ Example using C<postpone_once()>
 
 Example using the OO
 
- use Data::Postpone;
+ use Data::Postponed;
  
  %functions = ( foobar => 'foo' );
  
- $code = "sub " . Data::Postpone::Once->new( $functions{foobar} ) . " { return time }";
+ $code = "sub " . Data::Postponed::Once->new( $functions{foobar} ) . " { return time }";
  $functions{foobar} = "baz";
  
  # Reflects the new name of 'bar' instead of 'foo';
@@ -73,7 +73,7 @@ flux until finalized. Once finalized, they are no longer overloaded.
 
 If you want to also prevent changes to input variables because you
 don't want to accidentally think you're reaching back in time when
-you're not, use L<DatA::Postpone::OnceOnly>.
+you're not, use L<Data::Postponed::OnceOnly>.
 
 =head1 METHODS
 
@@ -91,9 +91,9 @@ Returns a new overloaded object bound to whatever was passed in as the EXPR.
 
 =item C<"">, C<0+>, C<bool>
 
-Each of these methods are overridden from L<Data::Postpone>. If you
+Each of these methods are overridden from L<Data::Postponed>. If you
 wished to only finalize strings, you might just copy the C<""> and
-C<new> methods to your own subclass of L<Data::Postpone>.
+C<new> methods to your own subclass of L<Data::Postponed>.
 
 =back
 

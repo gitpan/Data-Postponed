@@ -9,7 +9,7 @@ use Data::Postponed::Forever;
 use Data::Postponed::Once;
 use Data::Postponed::OnceOnly;
 
-$VERSION = 0.06;
+$VERSION = 0.07;
 
 BEGIN {
     # Separate out which constants can be imported from B or which
@@ -257,9 +257,8 @@ for my $operation ( qw( cos sin exp abs log int sqrt ),
 ######################################################################
 
 sub Clone {
-    # Clone the given object. This looks very much like _Postpone
-    # except that it doesn't add anything new onto the evaluation
-    # stack.
+    # Clone the given object. This is like creating a new object except
+    # it doesn't add anything to the stack.
     my $self = shift;
     my $new = ref( $self )->new;
     @$new = @$self;
@@ -455,7 +454,7 @@ facto changes to input variables
 
 Postponing changes with postpone()
 
- use Data::Postpone 'postpone';
+ use Data::Postponed 'postpone';
  %functions = ( foobar => 'foo' );
  
  $code = "sub " . postpone( $functions{foobar} ) . " { return time }";
@@ -469,7 +468,7 @@ Postponing changes with postpone()
 
 Postponing changes with postpone_once()
 
- use Data::Postpone 'postpone_once';
+ use Data::Postponed 'postpone_once';
  
  %functions = ( foobar => 'foo' );
  
@@ -486,7 +485,7 @@ Postponing changes with postpone_once()
 
 Postponing changes with postpone_forever()
 
- use Data::Postpone 'postpone_forever';
+ use Data::Postponed 'postpone_forever';
  
  %functions = ( foobar => 'foo' );
  

@@ -33,3 +33,7 @@ Revision history for Data-Postponed
     attempting to parse this breaks perl's parser and strange errors
     result otherwise.
 
+0.07   Apr 10, 2005
+  - Spelling fixes in all the POD. I consistently mispelled
+    'Data::Postponed' as 'Data::Postpone'.
+
