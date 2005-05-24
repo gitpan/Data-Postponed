@@ -3,6 +3,9 @@ lib/Data/Postponed.pm
 lib/Data/Postponed/Forever.pm
 lib/Data/Postponed/Once.pm
 lib/Data/Postponed/OnceOnly.pm
+lib/Data/Postponed/Util/NoLonger.pm
+lib/Data/Postponed/Util/ReadOnly/Array.pm
+lib/Data/Postponed/Util/ReadOnly/Scalar.pm
 Makefile.PL
 MANIFEST			This list of files
 META.yml
@@ -10,9 +13,21 @@ README
 SIGNATURE
 t/00signature.t
 t/01pod.t
-t/02pod-coverage.t
-t/10load.t
-t/11eval.t
-t/12once.t
-t/13onlyonce.t
-t/14const_t
+t/10export.t
+t/11isa.t
+t/12usage.t
+t/20dump.t
+t/21debug1.t
+t/22debug2.t
+t/23debug3.t
+t/24trace.t
+t/30overloaded.t
+t/31postpone.t
+t/32clone.t
+t/33finalize.t
+t/40forever.t
+t/41once.t
+t/42onceonly.t
+t/data.txt
+t/debug.tst
+t/test

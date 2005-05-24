@@ -1,52 +1,147 @@
 package Data::Postponed;
 use strict;
-use vars qw( $VERSION $DEBUG @ISA @EXPORT_OK );
-use B qw( svref_2object );
-use overload (); # to be imported later
-use Carp qw( croak );
+use vars ( '$VERSION', '@ISA', '@EXPORT_OK', '%EXPORT_TAGS',
+           '@POSTPONERS', '@CLONERS', '@FINALIZERS',
+           '%Objects', '%Values' );
+use Carp ('carp', 'croak');
 use Exporter;
-use Data::Postponed::Forever;
-use Data::Postponed::Once;
-use Data::Postponed::OnceOnly;
 
-$VERSION = 0.07;
-
+$VERSION = 0.17;
 BEGIN {
-    # Separate out which constants can be imported from B or which
-    # ones I have to "invent" on the spot.
-    my @manual;
-    my @import;
-    for my $constant ( [ SVf_READONLY => 0x00800000 ],
-		       [ SVf_FAKE =>     0x00100000 ],
-		       [ SVs_TEMP =>     0x00000800 ],
-		       [ SVs_PADTMP =>   0x00000200 ] ) {
-	if ( grep $constant->[0] eq $_, @B::EXPORT_OK ) {
-            push @import, $constant->[0];
-	}
- 	else {
-            push @manual, $constant;
+    # Generate DEBUG.
+    if ( $ENV{DATA_POSTPONED_DEBUG} or $^D ) {
+	eval {
+	    require Carp::Assert;
+	    Carp::Assert->import;
+	};
+	if ( my $e = $@ ) {
+	    eval( 'sub DEBUG () { !!0 }; 1' );
+#	    carp __PACKAGE__ . " can't enable assertions: $@\n";
 	}
     }
-
-    # This stuff is ok to import.
-    if ( @import ) {
-	B->import( @import );
+    else {
+	eval( 'sub DEBUG () { !!0 }; 1' );
     }
     
-    for my $constant ( @manual ) {
-	eval "sub $constant->[0] () { $constant->[1] }; 1"
-	  or die $@;
+    # Generate TRACE and DUMP_TRACE
+    if ( $ENV{DATA_POSTPONED_TRACE} ) {
+	eval( 'sub TRACE () { !!1 }; 1;' );
+	eval( 'use Data::Dump::Streamer 1.11 ();'
+	      . 'sub DUMP_TRACE () { !!1 };'
+	      . '1;' );
+	if ( my $e = $@ ) {
+	    eval( 'sub DUMP_TRACE () { !!0 }; 1' );
+	}
     }
-};
+    else {
+	eval( 'sub TRACE () { !!0 }; sub DUMP_TRACE () { !!0 }; 1' );
+    }
+    
+    *isa = \ &UNIVERSAL::isa;
+}
 
 ######################################################################
-#		 Function exports and OO composition
+#			  Debugging schtuph
 ######################################################################
 
-@ISA = 'Exporter';
-@EXPORT_OK = ( 'postpone',
-	       'postpone_once',
-	       'postpone_forever' );
+sub _dump_literal {
+    local $_ = shift;
+    if ( not defined ) {
+	return 'undef';
+    }
+    elsif ( \!!1 == \$_[0] ) {
+    	return 'TRUE';
+    }
+    elsif ( \!!0 == \$_[0] ) {
+    	return 'FALSE';
+    }
+#    elsif ( $_[0] =~ /^(?ix:[+-]?(?:\d+\.\d*|\d*\.\d+)(?:E[+-]?\d+)?)$/ ) {
+    elsif ( /^(?ix:[+-]?(?:\d+\.?\d*|\d*\.\d+)(?:E[+-]+\d+)?)$/ ) {
+	# The regex was taken from Regexp::Common $RE{num}{real},
+	# simplified, and fixed. The original regex thought '.' was a
+	# number.
+	return "$_";
+    }
+    else {
+	require Data::Dumper;
+	return Data::Dumper::qquote( $_ );
+    }
+}
+
+sub Dump {
+    my $self = shift;
+    @_ == 0
+      or croak "Usage: ->Dump()";
+    
+    my $str = overload::StrVal( $self );
+    
+    DEBUG and
+      assert( exists $Objects{$str},
+	      "$str has a data store" );
+    my $data = $Objects{$str};
+    
+    my $result;
+    if ( 1 == @$data ) {
+	if ( isa( ${$data->[0]}, __PACKAGE__ ) ) {
+	    $result = Data::Postponed::Dump( ${$data->[0]} );
+	}
+	else {
+	    $result = _dump_literal( ${$data->[0]} );
+	}
+    }
+    else {
+	my $a;
+	if ( ! defined $data->[0] ) {
+	}
+	elsif ( isa( ${$data->[0]}, __PACKAGE__ ) ) {
+	    $a = Data::Postponed::Dump( ${$data->[0]} );
+	}
+	else {
+	    $a = _dump_literal( ${$data->[0]} );
+	}
+	
+	my $b;
+	if ( ! defined $data->[2] ) {
+	}
+	elsif ( isa( ${$data->[2]}, __PACKAGE__ ) ) {
+	    $b = Data::Postponed::Dump( ${$data->[2]} );
+	}
+	else {
+	    $b = _dump_literal( ${$data->[2]} );
+	}
+	
+	
+	if ( not defined $a ) { $a = "\$b" }
+	elsif ( not defined $b ) { $b = "\$a" }
+	
+	my $op = $data->[1];
+	$result = "($op $a $b)";
+    }
+    
+    if ( defined wantarray ) {
+	return $result;
+    }
+    else {
+	print $result;
+	# void context return
+    }
+}
+
+######################################################################
+#                          Function exports
+######################################################################
+
+BEGIN {
+    *import = \ &Exporter::import;
+    @EXPORT_OK = ( 'postpone',
+		   'postpone_once',
+		   'postpone_forever' );
+    %EXPORT_TAGS = ( all => \ @EXPORT_OK );
+}
+
+sub postpone         { return Data::Postponed::OnceOnly->new( @_ ) }
+sub postpone_once    { return Data::Postponed::Once    ->new( @_ ) }
+sub postpone_forever { return Data::Postponed::Forever ->new( @_ ) }
 
 # sub import {
 #     my ( $pkg ) = @_;
@@ -58,41 +153,607 @@ BEGIN {
 #     my ( @exports, $constant );
 #     for ( @_[ 1 .. $#_ ] ) {
 #         if ( not defined $constant
-# 	     and
-# 	     /^:(postpone(?:_forever|_once)?)$/ ) {
-# 	    $constant = do { no strict 'refs';
-# 			     \ &$1 };
-# 	    overload::constant( map { $_ => $constant }
-# 				qw( integer float binary q qr ) );
+#            and
+#            /^:(postpone(?:_forever|_once)?)$/ ) {
+#           $constant = do { no strict 'refs';
+#                            \ &$1 };
+#           overload::constant( map { $_ => $constant }
+#                               qw( integer float binary q qr ) );
 #         }
-# 	else {
-# 	    push @exports, $_;
-# 	}
+#       else {
+#           push @exports, $_;
+#       }
 #     }
     
 #     if ( @exports ) {
-# 	__PACKAGE__->export_to_level( 2, $pkg, @exports );
+#       __PACKAGE__->export_to_level( 2, $pkg, @exports );
 #     }
     
 #     1;
 # }
 
-sub postpone_forever { return Data::Postponed::Forever->new( $_[0] ) }
-sub postpone_once { return Data::Postponed::Once->new( $_[0] ) }
-sub postpone { return Data::Postponed::OnceOnly->new( $_[0] ) }
+######################################################################
+#                         Object composition
+######################################################################
+
+# Objects are a scalar reference to nothing in particular. Their data
+# is stored in the %Objects hash. It is accessed by each object's
+# overload::Strval() value.
 
 sub new {
-    croak( "Data::Postponed is a virtual class. You must call"
-	   . " Data::Postponed::Forever->new,"
-	   . " Data::Postponed::Once->new,"
-	   . " or Data::Postponed::OnceOnly->new instead" );
+    # A basic constructor. This creates a basic data store, inserts it
+    # into %Objects, and returns the object which will be used as a
+    # key to access that data.
+    
+    @_ == 2
+      or croak "Usage: Data::Postponed::...->new( VALUE )";
+    
+    my $data = [ \ $_[1] ];
+    my $self = bless \ do { my $v; $v }, $_[0];
+    my $str = overload::StrVal( $self );
+    
+    TRACE and
+      carp "$_[0]\->new $str.\n"
+	. ( DUMP_TRACE
+	    ? ( Data::Dump::Streamer::Dump()
+		->Purity(0)
+		->Data($_[1])
+		->Out )
+	    : "" );
+    DEBUG and
+      assert( ! exists $Objects{$str},
+	      "Object store doesn't exist prior to creation" );
+    
+    $Objects{$str} = $data;
+    
+    return $self;
+}
+
+sub DESTROY {
+    # A basic destructor. This removes the object's backing store from
+    # %Objects.
+    
+    my $self = shift;
+    my $str = overload::StrVal( $self );
+    
+    TRACE and
+      carp "DESTROY $str";
+    
+    delete $Values{$str};
+    if ( my $data = delete $Objects{$str} ) {
+	# This branch is sometimes skipped if the global
+	# $Objects{$str} was reaped during global cleanup. If it
+	# doesn't exist, oh well.
+	my $count = @$data;
+
+	# Clear $data because it might contain a reference back to
+	# $self.
+	@$data = ();
+	
+	DEBUG and
+	  assert( $count % 2 == 1,
+		  "$str has N*2 + 1 items" );
+	
+	@$data = ();
+    }
+    
+    return;
+}
+
+sub _Data {
+    @_ == 1
+      or croak "Usage \$obj->_Data()";
+    
+    my $self = shift;
+    my $str = overload::StrVal( $self );
+
+    TRACE and
+      carp "_Data $str";
+    DEBUG and
+      assert( exists $Objects{$str},
+	      "$str has a data store" );
+    
+    $Objects{overload::StrVal( $self )};
 }
 
 ######################################################################
-#		     Oodles of overload.pm magic
+#                       Postponing operations
 ######################################################################
 
-overload->import
+sub _IsBinary { shift() =~ /^(?:\+|\-|\*\*?|\/|\%|\<[\<\=]?|\>[\>\=]?|x|\.|[\!\=]\=|\<\=\>|cmp|l[te]|g[te]|eq|ne|\&|\||\^|atan2)$/ }
+
+BEGIN {
+    @POSTPONERS = ( map split( ' ' ),
+		    '+ - * / % ** << >> x .',
+#		    '+= -= *= /= %= **= <<= >>= x= .=',
+		    '< <= > >= == !=',
+		    '<=> cmp',
+		    'lt le gt ge eq ne',
+		    '& | ^',
+#		    '&= |= ^=',
+		    'atan2',
+		    'neg ! ~',
+		    'cos sin exp abs log sqrt' );
+    
+    for my $operation ( @POSTPONERS ) {
+	no strict 'refs';
+	*{"Data::Postponed::" . $operation} = sub {
+	    # If I'm being asked to produce a final answer, I don't
+	    # want to put work off anymore. So instead of punting, I
+	    # return the finalized answer, now.
+	    TRACE and
+	      carp "Postponing $operation for " . overload::StrVal( $_[0] ) . "\n"
+		. ( DUMP_TRACE
+		    ? ( Data::Dump::Streamer::Dump( @_[ 1 .. $#_ ] )
+			->Purity( 0 )
+			->Out )
+		    : "" );
+	    
+	    # Copy the value from $_[0] because -= assignment forms
+	    # will overwrite it and my reference to the $_[0] on input
+	    # will be transmogrified into a reference to the $_[0] on
+	    # output.
+	    #
+	    # This will create a new object with a new data store with
+	    # the initial value set to the Data::Postponed object that
+	    # is currently involved in being postponed.
+	    my $original = overload::StrVal( $_[0] );
+	    my $new = ref( $_[0] )->new( undef );
+	    my $str = overload::StrVal( $new );
+	    
+	    if ( DEBUG ) {
+		assert( ! ref( ${$Objects{$str}[0]} )
+			|| ! overload::Overloaded( ${$Objects{$str}[0]} )
+			|| $str ne overload::StrVal( ${$Objects{$str}[0]} ),
+			"Object's initial value is itself - infinite recursion" );
+		assert( ! defined $_[2]
+			|| $_[2] =~ /^1?$/,
+			"'inverted' parameter is undef, TRUE, or FALSE" );
+		assert( exists $Objects{$str},
+			"$str has a data store" );
+		assert( @{$Objects{$str}} % 2 == 1,
+			"$str has N*2 + 1 items" );
+	    }
+	    
+	    # Now modify this object so it contains the old value, the
+	    # operation, and if it is a binary operation, the new
+	    # value to operate on.
+	    my $self = shift;
+	    @{$Objects{$str}}
+	      = ($_[1] ? # inverted-p
+		 
+		 # Inverted binary.
+		 ( _MaybeRef( $self, $_[0] ), $operation, \ $self ) :
+		 
+		 ( ! _IsBinary( $operation ) ? # binary-p
+		   
+		   # Unary operation
+		   ( \ $self, $operation, undef ) :
+		   
+		   ( defined( $_[1] ) ? # non-assignment-p
+		     
+		     # Non-assignment binary
+		     ( \ $self, $operation, _MaybeRef( $self, $_[0] ) ) :
+		     
+		     # Assignment binary
+		     ( \ $self, $operation, _MaybeRef( $self, $_[0] ) ) ) ) );
+	    
+	    return $new;
+	    
+	    # FIXME!!  I thought the following code was required to
+	    # prevent postponing during finalization but it appears
+	    # this never happens. If it turns out that I need it, I'm
+	    # leaving the code here.
+	    
+	    # Examine the call stack starting with my parent and the
+	    # @_ for any calls to Data::Postponed::_Finalize to see if
+	    # the the $_[0] present here is the same $_[0] present
+	    # there. If so, then I really ought not to be postponing
+	    # this object and should be sure to return the finalized
+	    # value, not a postponed object.
+	    #
+	    # See perldebguts for caller() in list context, declared
+	    # in the DB package.
+#	    my $IsFinalizing;
+#	    for ( my $cx = 1;
+#		  my ( $function ) = ( caller $cx )[ 3 ];
+#		  ++ $cx ) {
+#		if ( $function eq 'Data::Postponed::_Finalize' ) {
+#		    $IsFinalizing = !!1;
+#		    last;
+#		}
+#	    }
+#
+#	    return( $IsFinalizing
+#		    ? &{ref( $new ) . "::_Finalize"}( $new )
+#		    : $new );
+	};
+    }
+}
+
+sub _MaybeRef {
+    if ( isa( $_[0], __PACKAGE__ )
+	 and isa( $_[1], __PACKAGE__ )
+	 and overload::StrVal( $_[0] ) eq overload::StrVal( $_[1] ) ) {
+	return undef;
+    }
+    else {
+	return \ $_[1];
+    }
+}
+
+######################################################################
+#                         Cloning operation
+######################################################################
+
+# I'm not aware of any other function that is valid to use here so I'm
+# not bothering to put '=' in an array and make it visible.
+
+BEGIN {
+    @CLONERS = '=';
+    
+    {
+	no strict 'refs';
+	*{"Data::Postponed::="} = sub  {
+	    my $original = overload::StrVal( $_[0] );
+	    # Clone the given object. This is like creating a new
+	    # object except it doesn't add anything to the stack.
+	    
+	    # the undef is discarded shortly.
+	    my $new = ref( $_[0] )->new( undef );
+	    my $new_str = overload::StrVal( $new );
+	    
+	    TRACE and
+	      carp "CLONE $original -> $new_str"
+		. ( DUMP_TRACE
+		    ? ( Data::Dump::Streamer::Dump()
+			->Purity(0)
+			->Data( $_[0], $new )
+			->Out )
+		    : "" );
+	    
+	    # Copy @{$Objects{$original}} into @$data but replace any
+	    # instances of self-reference from $self to be self-ref
+	    # for the new object.
+	    @{$Objects{$new_str}} = @{$Objects{$original}};
+#	    my $SelfRef;
+# 	    for ( grep +( 'REF' eq ref()
+#			  && isa( $$_, __PACKAGE__ )
+#			  && $original eq overload::StrVal( $$_ ) ),
+# 		  @{$Objects{$new_str}} ) {
+#		$SelfRef = !!1;
+# 		$_ = undef;#\ $new;
+# 	    }
+	    
+	    if ( DEBUG ) {
+		assert( exists $Objects{$original},
+			"The cloned object, $original, has a data store" );
+		assert( @{$Objects{$original}} % 2 == 1,
+			"The original data store has N*2+1 elements" );
+		assert( exists $Objects{$new_str},
+			"The clone, $new_str, has a data store" );
+		assert( @{$Objects{$new_str}} % 2 == 1,
+			"The cloned data store has N*2+1 elements" );
+#		if ( $SelfRef ) {
+#		    assert( grep( ( 'REF' eq ref()
+#				    && isa( $$_, __PACKAGE__ )
+#				    && $new_str eq overload::StrVal( $$_ ) ),
+#				  @{$Objects{$new_str}} ),
+#			    "The original had self reference and so does the clone." );
+#		}
+	    }
+	    
+	    return $new;
+	};
+    }
+}
+
+######################################################################
+#                        Finalizing operation
+######################################################################
+
+BEGIN {
+    @FINALIZERS = ( '""', '0+', 'bool',
+		    '<>',
+		    '${}', '@{}', '%{}', '&{}', '*{}' );
+    no strict 'refs';
+    
+    # conv
+    *{'Data::Postponed::""'}   = sub {
+	no strict 'refs';
+        local $_ = &{$_[0]->can( '_Finalize' )};
+	
+	DEBUG and
+	  assert( ! isa( $_, __PACKAGE__ ),
+		  "_Finalize( OBJ ), finalized" );
+	
+	return "$_";
+    };
+    
+    *{'Data::Postponed::0+'}   = sub {
+	no strict 'refs';
+        local $_ = &{$_[0]->can( '_Finalize' )};
+	
+	DEBUG and
+	  assert( ! isa( $_, __PACKAGE__ ), 
+		  "_Finalize( OBJ ), finalized" );
+	
+	0+$_;
+    };
+    
+    *{'Data::Postponed::bool'} = sub {
+	no strict 'refs';
+        local $_ = &{$_[0]->can( '_Finalize' )};
+	
+	DEBUG and
+	  assert( ! isa( $_, __PACKAGE__ ), 
+		  "_Finalize( OBJ ), finalized" );
+	
+	!!$_;
+    };
+    
+    # iterators
+    *{'Data::Postponed::<>'}   = sub {
+	no strict 'refs';
+        local $_ = &{$_[0]->can( '_Finalize' )};
+	
+	DEBUG and
+	  assert( ! isa( $_, __PACKAGE__ ), 
+		  "_Finalize( OBJ ), finalized" );
+	
+        return readline( ref()
+                         ? $_
+                         : do { no strict 'refs';
+                                caller() . "::$_" } );
+    };
+    
+    # dereferencing
+    *{'Data::Postponed::${}'}  = sub {
+	no strict 'refs';
+        local $_ = &{$_[0]->can( '_Finalize' )};
+	
+	DEBUG and
+	  assert( ! isa( $_, __PACKAGE__ ), 
+		  "_Finalize( OBJ ), finalized" );
+	
+        return( ref()
+                ? $_
+                : do { no strict 'refs';
+                       \${ caller() . "::$_" } } );
+    };
+
+    *{'Data::Postponed::@{}'}  = sub {
+	no strict 'refs';
+        local $_ = &{$_[0]->can( '_Finalize' )};
+	
+	DEBUG and
+	  assert( ! isa( $_, __PACKAGE__ ), 
+		  "_Finalize( OBJ ), finalized" );
+	
+        return( ref()
+                ? $_
+                : do { no strict 'refs';
+                       \@{ caller() . "::$_" } } );
+    };
+
+    *{'Data::Postponed::%{}'}  = sub {
+	no strict 'refs';
+        local $_ = &{$_[0]->can( '_Finalize' )};
+	
+	DEBUG and
+	  assert( ! isa( $_, __PACKAGE__ ), 
+		  "_Finalize( OBJ ), finalized" );
+	
+        return( ref()
+                ? $_
+                : do { no strict 'refs';
+                       \%{ caller() . "::$_" } } );
+    };
+
+    *{'Data::Postponed::&{}'}  = sub {
+	no strict 'refs';
+        local $_ = &{$_[0]->can( '_Finalize' )};
+	
+	DEBUG and
+	  assert( ! isa( $_, __PACKAGE__ ), 
+		  "_Finalize( OBJ ), finalized" );
+	
+        return( ref()
+                ? $_
+                : do{ no strict 'refs';
+                      \&{caller() . "::$_"} } );
+    };
+
+    *{'Data::Postponed::*{}'}  = sub {
+	no strict 'refs';
+        local $_ = &{$_[0]->can( '_Finalize' )};
+	
+	DEBUG and
+	  assert( ! isa( $_, __PACKAGE__ ), 
+		  "_Finalize( OBJ ), finalized" );
+	
+        return( ref()
+                ? $_
+                : do { no strict 'refs';
+                       \*{caller() . "::$_" } } );
+    };
+    
+    if ( TRACE ) {
+	for my $operation ( @FINALIZERS ) {
+	    no strict 'refs';
+	    BEGIN { $^W = 0 }
+	    my $original = \ &{"Data::Postponed::$operation"};
+	    *{"Data::Postponed::$operation"} = sub {
+		carp "FINALIZE $operation for " .  overload::StrVal( $_[0] );
+                my ( @out, $out );
+                if ( wantarray ) {
+                    @out = &$original;
+                }
+                elsif ( defined wantarray ) {
+                    $out = &$original;
+                }
+                else {
+                    &$original;
+                }
+                carp "<< FINALIZE $operation for " . overload::StrVal( $_[0] );
+                return( wantarray ? @out[ 0 .. $#out ] :
+                        defined( wantarray ) ? $out :
+                        () );
+	    };
+	}
+    }
+}
+
+sub A () { 0 }
+sub OP () { 1 }
+sub B () { 2 }
+
+sub _Finalize {
+    # If I've been asked to finalize something that is not a
+    # Data::Postponed object, then it already final and I just return
+    # it.
+    if ( ! isa( $_[0], __PACKAGE__ ) ) {
+	TRACE and
+	  warn "<- $_[0]\n";
+	#	TRACE and
+	#	  warn "Done, not postponed.";
+ 	return $_[0];
+    }
+    
+    my $self = $_[0];
+    my $str = overload::StrVal( $self );
+    my $data = $Objects{$str};
+    
+    TRACE and
+      warn "_Finalize for $str\n";
+    
+    if ( DEBUG ) {
+	assert( exists $Objects{$str},
+		"$str has a data store" );
+	assert( @{$Objects{$str}} % 2 == 1,
+		"$str has N*2+1 items" );
+    }
+    
+    # Do any value copying necessary for binary operations.
+    if ( @$data > 1 and
+	 _IsBinary( $data->[OP] ) ) {
+	if ( not defined $data->[B] ) {
+	    $data->[B] = $data->[A];
+	}
+	if ( DEBUG ) {
+	    assert( defined $data->[A],
+		    "\$data->[A] is defined for binary op" );
+	    assert( defined $data->[B],
+		    "\$data->[B] is defined for binary op" );
+	}
+    }
+    else {
+	if ( DEBUG ) {
+	    assert( defined $data->[A],
+		    "\$data->[A] is defined for unary op" );
+	}
+    }
+    
+    $Values{$str} = ( isa( ${$data->[0]}, __PACKAGE__ )
+		      ? ${$data->[0]}->can('_Finalize')->( ${$data->[0]} )
+		      : ${$data->[0]} );
+    
+    # For each operation, execute it and update the intermediate value
+    # computed thus far.
+    for ( my $ix = 1;
+ 	  $ix < $#$data;
+ 	  $ix += 2 ) {
+	my $op = $data->[$ix];
+	my $b;
+	if ( _IsBinary( $op ) ) {
+	    $b = ( isa( ${$data->[$ix+1]}, __PACKAGE__ )
+		   ? ${$data->[$ix+1]}->can('_Finalize')->( ${$data->[$ix+1]} )
+		   : ${$data->[$ix+1]} );
+	}
+	
+	if ( DEBUG ) {
+	    if ( _IsBinary( $op ) ) {
+		assert( ref( $data->[$ix+1] ),
+			"\$value is a reference" );
+	    }
+	    else {
+		assert( ! defined $b,
+			"\$value is empty" );
+	    }
+ 	}
+	
+	{
+	    local $SIG{__WARN__} ||= \ &Carp::cluck;
+	    local $SIG{__DIE__} ||= \ &Carp::confess;
+	    
+	    $Values{$str} =
+	      ( ( $op eq '+'   ) ? ( $Values{$str} +   $b ) :
+		( $op eq '-'   ) ? ( $Values{$str} -   $b ) :
+		( $op eq '*'   ) ? ( $Values{$str} *   $b ) :
+		( $op eq '/'   ) ? ( $Values{$str} /   $b ) :
+		( $op eq '%'   ) ? ( $Values{$str} %   $b ) :
+		( $op eq '**'  ) ? ( $Values{$str} **  $b ) :
+		( $op eq '<<'  ) ? ( $Values{$str} <<  $b ) :
+		( $op eq '>>'  ) ? ( $Values{$str} >>  $b ) :
+		( $op eq 'x'   ) ? ( $Values{$str} x   $b ) :
+		( $op eq '.'   ) ? ( $Values{$str} .   $b ) :
+		( $op eq '<'   ) ? ( $Values{$str} <   $b ) :
+		( $op eq '<='  ) ? ( $Values{$str} <=  $b ) :
+		( $op eq '>'   ) ? ( $Values{$str} >   $b ) :
+		( $op eq '>='  ) ? ( $Values{$str} >=  $b ) :
+		( $op eq '=='  ) ? ( $Values{$str} ==  $b ) :
+		( $op eq '!='  ) ? ( $Values{$str} !=  $b ) :
+		( $op eq '<=>' ) ? ( $Values{$str} <=> $b ) :
+		( $op eq 'cmp' ) ? ( $Values{$str} cmp $b ) :
+		( $op eq 'lt'  ) ? ( $Values{$str} lt  $b ) :
+		( $op eq 'le'  ) ? ( $Values{$str} le  $b ) :
+		( $op eq 'gt'  ) ? ( $Values{$str} gt  $b ) :
+		( $op eq 'ge'  ) ? ( $Values{$str} ge  $b ) :
+		( $op eq 'eq'  ) ? ( $Values{$str} eq  $b ) :
+		( $op eq 'ne'  ) ? ( $Values{$str} ne  $b ) :
+		( $op eq '&'   ) ? ( $Values{$str} &   $b ) :
+		( $op eq '|'   ) ? ( $Values{$str} |   $b ) :
+		( $op eq '^'   ) ? ( $Values{$str} ^   $b ) :
+		
+		# Several functions in Data::Postponed are named
+		# abs(), int(), etc. I have to write CORE::foo() to
+		# call the real function instead of the local one.
+		( $op eq 'atan2' ) ? ( CORE::atan2( $Values{$str}, $b ) ) :
+		( $op eq 'neg'  ) ? ( - $Values{$str} ) :
+		( $op eq '!'    ) ? ( ! $Values{$str} ) :
+		( $op eq '~'    ) ? ( ~ $Values{$str} ) :
+		( $op eq 'cos'  ) ? ( CORE::cos $Values{$str} ) :
+		( $op eq 'sin'  ) ? ( CORE::sin $Values{$str} ) :
+		( $op eq 'exp'  ) ? ( CORE::exp $Values{$str} ) :
+		( $op eq 'abs'  ) ? ( CORE::abs $Values{$str} ) :
+		( $op eq 'log'  ) ? ( CORE::log $Values{$str} ) :
+		( $op eq 'sqrt' ) ? ( CORE::sqrt $Values{$str} ) :
+		croak( "$op isn't an implemented operation by Data::Postponed" ) );
+	}
+	
+ 	 DEBUG and
+ 	    assert( ! ref($Values{$str})
+ 		    || ! overload::Overloaded( $Values{$str} )
+ 		    || isa( $Values{$str}, __PACKAGE__ ),
+ 		    "Intermediate value of \$Values{$str} is not postponed" );
+    }
+    
+    DEBUG and
+      assert( ! ref($Values{$str})
+	      || ! overload::Overloaded( $Values{$str} )
+	      || isa( $Values{$str}, __PACKAGE__ ),
+	      "Final value of \$Values{$str} is not postponed" );
+
+    TRACE and
+      warn "<== $Values{$str}\n";
+    return delete $Values{$str};
+}
+
+######################################################################
+#                           Overload magic
+######################################################################
+
+use overload
   (# Hook all the non-finalizing operations which will be stored
    # internally as "stuff to do" when a finalizing operation is
    # detected.
@@ -100,350 +761,21 @@ overload->import
    # These are the pure-value changing methods. The original object
    # isn't modified so I just return a new object including the new
    # value and an operation.
-   map( { ( $_ ) x 2 }
-	map split( ' ' ),
-	'=',
-	grep defined(),
-	@overload::ops{( 'with_assign',
-			 'assign',
-			 'num_comparison',
-			 '3way_comparison',
-			 'str_comparison',
-			 'binary',
-			 'unary',
-			 'mutators',
-			 'func',
-			 'conversion',
-			 'iterators', # Doesn't exist in 5.005.04
-			 # 'dereferencing',
-			 # 'special'
-		       )} ),
-   
-   '=' => "Clone" );
+   map( { $_ => $_ }#do { no strict 'refs';
+	#	#     \ &{__PACKAGE__ . "::$_"} } }
+	@POSTPONERS,
+	@CLONERS,
+	@FINALIZERS ),
+   fallback => 1 );
 
-######################################################################
-#			Postponing operations
-######################################################################
-
-# This is used for some deep introspection on the values being given
-# to this module. I will attempt to only take references to variables
-# and thus have a lighter in-memory load. This is handled by storing
-# the literal value if it is noted as PADTMP or READONLY.
-
-# If the value is SVf_READONLY, it is either a literal like "this is a
-# literal" or it is a value someone marked as readonly. Normally the
-# only values in perl that are flagged with SVf_READONLY are
-# PL_sv_undef, PL_sv_yes, PL_sv_no, and PL_sv_placeholder
-
-# If the value SVf_PADTMP has been set, the value is not derived from
-# a variable lookup but is instead the result of some
-# computation. like foo( time() ). Here, the value given to foo() is
-# the result of computing time(). There is no way to later reference
-# that value because if foo() doesn't store it, it will expire.
-
-sub _ByValueOrReference {
-    my $flags = svref_2object( \ $_[0] )->FLAGS;
-    
-    if ( ref $_[0] ) {
-	if ( overload::Overloaded( $_[0] )
-	     and $_[0]->isa( __PACKAGE__ ) ) {
-	    # This value is an instance of this package. I'd rather
-	    # clone it.
-	    return \ bless [ @{$_[0]} ], ref $_[0];
-	}
-# 	elsif ( ( SVf_READONLY
-# 		  | SVf_FAKE
-# 		  | SVs_TEMP
-# 		  | SVs_PADTMP ) ) {
-# 	    # I was given a reference but it isn't visible anywhere
-# 	    # else so I don't bother to store it by reference.
-# 	    return $_[0];
-# 	}
-	else {
-	    # A reference. Since I won't know later whether this is my
-	    # reference or something that was passed in, I take a
-	    # reference to it regardless. This makes postpone( \
-	    # "literal" ) equivalent to postpone( \ $foo ).
-	    
-	    # As an aside, stuff blessed into the "0" and "\0" classes
-	    # will fail this test. I don't care. People using those
-	    # classes expect bad stuff.
-	    return \ $_[0];
-	}
-    }
-    elsif ( svref_2object( \ $_[0] )->FLAGS
-	    & ( SVf_READONLY
-		| SVf_FAKE
-		| SVs_TEMP
-		| SVs_PADTMP ) ) {
-	# A literal value or a temporary value but definately not a
-	# reference. So I store it by value. References might also be
-	# stored by value but I don't know the difference between a
-	# reference stored by value and a value stored by
-	# reference. So references are always stored by reference and
-	# values may or may not be.
-	return $_[0];
-    }
-    else {
-	# Everything else. This is actually identical to what happens
-	# if I'm given a reference.
-	
-	# The caller is allowed (nay, *expected*) to change the
-	# variable that I'm taking a referene to.
-	return \ $_[0];
-    }
-}
-
-# Non assignment, binary operations
-for my $operation ( 'atan2',
-		    map split( ' ' ),
-		    @overload::ops{( 'with_assign',
-				     'num_comparison',
-				     '3way_comparison',
-				     'str_comparison',
-				     'binary' )} ) {
-    no strict 'refs';
-    *{__PACKAGE__.'::'.$operation} = sub {
-	bless [ @{$_[0]},
-		_ByValueOrReference( $_[1] ),
-		$_[2],
-		$operation ],
-		  ref $_[0];
-    };
-}
-
-# Binary operations with assignment
-for my $operation ( split ' ', $overload::ops{assign} ) {
-    no strict 'refs';
-    *{__PACKAGE__.'::'.$operation} = sub {
-	$_[0] = bless [ @{$_[0]},
-			_ByValueOrReference( $_[1] ),
-			$_[2],
-			$operation ],
-			  ref $_[0];
-    };
-}
-
-# Unary operations with assignment
-for my $operation ( split( ' ', $overload::ops{mutators} ) ) {
-    no strict 'refs';
-    *{__PACKAGE__.'::'.$operation} = sub {
-	$_[0] = bless [ @{$_[0]},
-			undef,
-			!!0,
-			$operation ],
-			  ref $_[0];
-    };
-}
-
-# Non assignment unary operations
-for my $operation ( qw( cos sin exp abs log int sqrt ),
-		    map split( ' ' ),
-		    grep defined(), # iterators doesn't exist on 5.005.04
-		    @overload::ops{( 'unary',
-				     'iterators' )} ) {
-    no strict 'refs';
-    *{__PACKAGE__.'::'.$operation} = sub {
-	bless [ @{$_[0]},
-		undef,
-		!!0,
-		$operation ],
-		  ref $_[0];
-    };
-}
-
-######################################################################
-#			  Cloning operation
-######################################################################
-
-sub Clone {
-    # Clone the given object. This is like creating a new object except
-    # it doesn't add anything to the stack.
-    my $self = shift;
-    my $new = ref( $self )->new;
-    @$new = @$self;
-    
-    return $new;
-}
-
-######################################################################
-#			 Finalizing operation
-######################################################################
-
-for my $context ( split( ' ', $overload::ops{conversion} ) ) {
-    no strict 'refs';
-    *{__PACKAGE__.'::'.$context} = sub {
-	my $self = shift @_;
-	
-	# Iterate over all the values
-	my $accumulator = do { local $_ = shift @$self;
-			       ref() ? $$_ : $_ };
-	
-	while ( @$self ) {
-	    my $a = $accumulator;
-	    my ( $b, $inverted, $op ) = splice @$self, 0, 3;
-	    
-	    # If I stored a reference, dereference it now. This where
-	    # stored references to things finally becomes
-	    # finalized. I'm taking whatever the initial result was
-	    # and making it my actual work product.
-	    if ( ref $b ) {
-		if ( overload::Overloaded( $b )
-		     and
-		     overload::StrVal( $b ) eq overload::StrVal( $self ) ) {
-		    # This is an odd moment. If the thing I'm
-		    # attempting to get the value if is the object I'm
-		    # currently in, then I have a recursive structure.
-		    
-		    # I resolve this by noting that it wasn't
-		    # recursive to begin with so the value for the
-		    # recursive structure at this point must be
-		    # whatever the $accumulator has in it.
-
-		    # So the structure isn't *really* recursive, it is
-		    # only implemented that way.
-		    
-		    # $expr = $expr + $expr will cause this
-		    # situation. In a sense, $expr is now defined in
-		    # terms of itself which means it is never
-		    # defined. I say that if there is a definite
-		    # execution order, ( $expr + $expr ) happens
-		    # before the assignment so whatever the value in
-		    # $accumulator is, that is what the $expr being
-		    # added would be equal to.
-		    $b = $accumulator;
-		}
-		else {
-		    # This is where all the "magic" happens. Earlier
-		    # in the program's execution, some ->"Postpone
-		    # $op" method added this reference to the object
-		    # instead of just taking whatever value was
-		    # available at the moment.
-
-		    # Now, I'm finally going to get the results from
-		    # that object.
-		    $b = $$b;
-		}
-	    }
-	    
-	    # If I need to swap $a and $b because of overload.pm, here
-	    # is that moment.
-	    if ( $inverted ) {
-		( $a, $b ) = ( $b, $a );
-	    }
-	    
-	    # Overwrite the accumulated value with the computation
-	    # from the new expression.
-	    $accumulator
-	      = (# with_assign
-		 # + - * / % ** << >> x .
-		 '+' eq $op ? ( $a + $b ) :
-		 '-' eq $op ? ( $a - $b ) :
-		 '*' eq $op ? ( $a * $b ) :
-		 '/' eq $op ? ( $a / $b ) :
-		 '%' eq $op ? ( $a % $b ) :
-		 '**' eq $op ? ( $a ** $b ) :
-		 '<<' eq $op ? ( $a << $b ) :
-		 '>>' eq $op ? ( $a >> $b ) :
-		 'x' eq $op ? ( $a x $b ) :
-		 '.' eq $op ? ( $a . $b ) :
-		 
-		 # assign
-		 # += -= *= /= %/ **= <<= >>= x= .=
-		 '+=' eq $op ? ( $a + $b ) :
-		 '-=' eq $op ? ( $a - $b ) :
-		 '*=' eq $op ? ( $a * $b ) :
-		 '/=' eq $op ? ( $a / $b ) :
-		 '%=' eq $op ? ( $a % $b ) :
-		 '**=' eq $op ? ( $a ** $b ) :
-		 '<<=' eq $op ? ( $a << $b ) :
-		 '>>=' eq $op ? ( $a >> $b ) :
-		 'x=' eq $op ? ( $a x $b ) :
-		 '.=' eq $op ? ( $a . $b ) :
-		 
-		 # num_comparison
-		 # < <= > >= == !=
-		 '<' eq $op ? ( $a < $b ) :
-		 '<=' eq $op ? ( $a <= $b ) :
-		 '>' eq $op ? ( $a > $b ) :
-		 '>=' eq $op ? ( $a >= $b ) :
-		 '==' eq $op ? ( $a == $b ) :
-		 '!=' eq $op ? ( $a != $b ) :
-		 
-		 # 3way_comparison
-		 # <=> cmp
-		 '<=>' eq $op ? ( $a <=> $b ) :
-		 'cmp' eq $op ? ( $a cmp $b ) :
-		 
-		 # str_comparison
-		 # lt le gt gt eq ne
-		 'lt' eq $op ? ( $a lt $b ) :
-		 'le' eq $op ? ( $a le $b ) :
-		 'gt' eq $op ? ( $a gt $b ) :
-		 'ge' eq $op ? ( $a ge $b ) :
-		 'eq' eq $op ? ( $a eq $b ) :
-		 'ne' eq $op ? ( $a ne $b ) :
-		 
-		 # binary
-		 # & | ^
-		 '&' eq $op ? ( $a & $b ) :
-		 '|' eq $op ? ( $a | $b ) :
-		 '^' eq $op ? ( $a ^ $b ) :
-		 
-		 # unary
-		 # neg !
-		 'neg' eq $op ? ( - $a ) :
-		 '!' eq $op ? ( ! $a ) :
-		 
-		 # mutators
-		 # ++ --
-		 '++' eq $op ? ( ++ $a ) :
-		 '--' eq $op ? ( -- $a ) :
-		 
-		 # func
-		 # atan2 cos sin exp abs log sqrt
-		 'atan2' eq $op ? atan2( $a, $b ) :
-		 'cos' eq $op ? cos( $a ) :
-		 'sin' eq $op ? sin( $a ) :
-		 'exp' eq $op ? exp( $a ) :
-		 'abs' eq $op ? abs( $a ) :
-		 'log' eq $op ? log( $a ) :
-		 'int' eq $op ? int( $a ) :
-		 'sqrt' eq $op ? sqrt( $a ) :
-		 
-		 # conversion
-		 # bool "" 0+
-		 'bool' eq $op ? ( !! $a ) :
-		 '""' eq $op ? "$a" :
-		 '0+' eq $op ? ( 0 + $a ) :
-		 
-		 # iterators
-		 # <>
-		 '<>' eq $op ? scalar( readline $a ) :
-		 
-		 # dereferencing
-		 # ${} @{} %{} &{} *{}
-		 # '${}' eq $op ? $$a :
-		 # '@{}' eq $op ? @$a :
-		 # '%{}' eq $op ? %$a :
-		 # '&{}' eq $op ? &$a :
-		 # '*{}' eq $op ? *$a :
-		 
-		 croak( "Invalid operation '$op'" ) );
-	    # This is the end of a really big ternary assignment in list context.
-	    
-	} # End of a while() over expressions.
-	
-	return( '""' eq $context ? ( "$accumulator" ) :
-		'0+' eq $context ? ( 0 + $accumulator ) :
-		'bool' eq $context ? ( !! $accumulator ) :
-		croak( "Invalid context '$context' for finalizer" ) );
-    };
-}
+use Data::Postponed::Forever;
+use Data::Postponed::Once;
+use Data::Postponed::OnceOnly;
 
 1;
 
 __END__
+
 
 =head1 NAME
 

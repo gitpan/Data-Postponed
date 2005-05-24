@@ -1,16 +1,14 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Data-Postponed
-version:      0.07
+version:      0.17
 version_from: lib/Data/Postponed.pm
 installdirs:  site
 requires:
-    B:                             0
     Carp:                          0
     Exporter:                      0
     overload:                      0
     strict:                        0
-    Test::More:                    0
     vars:                          0
 
 distribution_type: module

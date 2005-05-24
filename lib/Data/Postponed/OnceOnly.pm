@@ -1,105 +1,49 @@
 package Data::Postponed::OnceOnly;
 use strict;
 use vars ( '@ISA' );
+use Data::Postponed::Util::NoLonger;
+use Data::Postponed::Util::ReadOnly::Scalar;
 
-
-@ISA = 'Data::Postponed';
-
-sub new {
-    bless [ Data::Postponed::_ByValueOrReference( $_[1] ) ],
-      $_[0];
+BEGIN {
+    @ISA = 'Data::Postponed';
+    *TRACE = *Data::Postponed::TRACE;
+    *DEBUG = *Data::Postponed::DEBUG;
+    *isa = \ &UNIVERSAL::isa;
 }
 
-sub DESTROY {} # Don't bother AUTOLOADing this
-
-# Attempt to use the 5.8.x Internals::SetReadOnly function and fail
-# over to a tie()'d function if that isn't available.
-#*SetReadOnly =
-#  defined &Internals::SetReadOnly ? \ &Internals::SetReadOnly :
-#  defined &Internals::SvREADONLY ? sub { Internals::SvREADONLY( $_[0], 1 ) } :
-#  undef;
-
-
-for my $context ( split ' ', $overload::ops{conversion} ) {
-    no strict 'refs';
-    my $super = "SUPER::$context";
-    *{__PACKAGE__ . "::$context"} = sub {
-	my ( $self ) = @_;
-	
-	# Make a copy of the contents of the value prior to allowing
-	# the parent finalizer to run. They'll be gone otherwise.
-#	if ( defined &SetReadOnly ) {
-#	    SetReadOnly( \ $_ ) for @$self;
-#	}
-#	else {
-	    eval { tie( $$_, 'Data::Postponed::_ReadOnly::Scalar',
-			$$_ ) }
-	      for @$self;
-#	}
-	my $value = $self->$super();
-	
-	# Now to be strict. All input variables are now marked read
-	# only so they cannot be accidentally written to again. This
-	# is actually going to mark a lot of extra stuff as read only
-	# too but I don't really care because it was internal to
-	# Data::Postponed and I'm about to let most of it expire in a
-	# moment anyway.
-	
-	# I'm still going to the trouble of marking *everything*
-	# because I want to be sure that I've covered my bases
-	# regarding variables that have been passed in.
-	print STDERR scalar ( @$self ) . "\n";
-	
-	# Now throw away all the history of symbolic calculation and
-	# store only the final value. I think I may be wasting time by
-	# doing this but since I'm not 100% sure, I'm doing this
-	# anyway.
-	@$self = ( $value );
-	
-	# Lastly, I make the implementation array read only and the
-	# object holding the reference to the array.
-#	if ( defined &SetReadOnly ) {
-#	    SetReadOnly( \ @$self );
-#	    SetReadOnly( $self );
-#	}
-#	else {
-# 	    tie( @$self, 'Data::Postponed::_ReadOnly::Array' );
-	    tie( $self, 'Data::Postponed::_ReadOnly::Scalar',
-		 $self );
-#	}
-	
-	return $_[0] = $value;
-    };
-}
-
-
-package Data::Postponed::_ReadOnly::Scalar;
-use strict;
-use Carp 'croak';
-
-sub TIESCALAR {
-    my $val = $_[1];
-    bless \ $val, $_[0];
-}
-sub FETCH { ${shift()} }
-sub STORE { croak( "Modification of a read-only value attempted" ) }
-sub DESTROY {} # Nothing special.
-
-package Data::Postponed::_ReadOnly::Array;
-use strict;
-use Carp 'croak';
-
-sub TIEARRAY { bless [ @_[ 1 .. $#_ ] ], $_[0] }
-sub FETCH { $_[0][$_[1]] }
-sub FETCHSIZE { 0 + @{$_[0]} }
-if ( $] >= 5.006 ) {
-    eval q[ sub EXISTS { exists $_[0][$_[1]] }; 1 ];
-}
-sub DESTROY {} # Nothing special.
-
-for my $method ( qw( STORE STORESIZE EXTEND DELETE CLEAR PUSH POP SHIFT UNSHIFT SPLICE ) ) {
-    no strict 'refs';
-    *$method = sub { croak( "Modification of a read-only value attempted" ) };
+sub _Finalize {
+    TRACE and
+      warn "Data::Postponed::Once::_Finalize for " . overload::StrVal($_[0]) . "\n";
+    my $str = overload::StrVal( $_[0] );
+    my $data = $Data::Postponed::Objects{$str};
+    my $val = \ &{ $_[0]->can( 'SUPER::_Finalize' ) }( @_ );
+    
+    # Mark the contents of this as object as read-only.
+    for ( grep ref(), @$data ) {
+	eval {
+	    tie $$_, "Data::Postponed::Util::ReadOnly::Scalar" =>
+	      $$_;
+	};
+	my $e = "$@";
+	if ( $e
+	     and not $e =~ /Modification of a read-only value attempted/ ) {
+	    die $e;
+	}
+    }
+    
+    @$data = $val;
+    
+    # Do my DESTROY work because now DESTROY is going to go somewhere
+    # else and this data will be orphaned otherwise. If memory gets
+    # re-used, then the same underlying data might even be visible to
+    # another object. Yuck.
+    delete $Data::Postponed::Values{$str};
+    delete $Data::Postponed::Objects{$str};
+    
+    Data::Postponed::Util::NoLonger->steal( $_[0], $$val );
+    
+    # return $_[0] = $$val;
+    return $$val;
 }
 
 1;

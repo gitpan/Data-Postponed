@@ -1,57 +1,29 @@
+#!perl
+use strict;
 use ExtUtils::MakeMaker;
+use 5.006;
+
 WriteMakefile
   (
    AUTHOR => '"Joshua ben Jore" <jjore@cpan.org>',
    SIGN => 1,
-   
-   NAME => 'Data::Postponed',
-   VERSION_FROM => 'lib/Data/Postponed.pm',
+
    ABSTRACT_FROM => 'lib/Data/Postponed.pm',
-   
+   NAME => "Data::Postponed",
    PREREQ_PM => {
-		 'strict' => 0,
-		 'vars' => 0,
-		 'overload' => 0,
-		 'B' => 0,
-		 'Carp' => 0,
-		 'Exporter' => 0,
-                 'Test::More' => 0,
+		 # Core modules for runtime
+		 overload => 0,
+		 strict => 0,
+		 vars => 0,
+		 Carp => 0,
+		 Exporter => 0,
+		 
+		 # Debugging
+		 # Carp::Assert => 0,
+		 
+		 # Tracing with content dumps
+		 # Data::Dump::Streamer => 1.11
+		 
 		},
-);
-
-# I observed that 5.005.04 couldn't load B while PERL_DL_NONLAZY was
-# turned on. This is the default from Test::Harness. Since this would
-# normally cause all the tests to fail, I'm manually editing the
-# Makefile to remove the flag.
-
-# PERL_DL_NONLAZY=1 perl -MB -e1
-# Can't load
-# '/home/josh/perl5.005_04/lib/5.00504/i686-linux/auto/B/B.so' for
-# module B:
-# /home/josh/perl5.005_04/lib/5.00504/i686-linux/auto/B/B.so:
-# undefined symbol: Perl_byterun at
-# /home/josh/perl5.005_04/lib/5.00504/i686-linux/DynaLoader.pm
-# line 169.
-#  at -e line 0
-# BEGIN failed--compilation aborted.
-
-BEGIN {
-    if ( $] <= 5.6 ) {
-	eval q[
-
-  sub MY::test_via_harness {
-      local $_ = shift()->MM::test_via_harness( @_ );
-      s/\bPERL_DL_NONLAZY=1 +//g;
-      return $_;
-  }
-  
-  sub MY::test_via_script {
-      local $_ = shift()->MM::test_via_script( @_ );
-      s/\bPERL_DL_NON_LAZY=1 +//g;
-      return $_;
-  }
-  1;
- ];
-        die $@ if $@;
-    }
-}
+   VERSION_FROM => 'lib/Data/Postponed.pm',
+  );

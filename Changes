@@ -37,3 +37,15 @@ Revision history for Data-Postponed
   - Spelling fixes in all the POD. I consistently mispelled
     'Data::Postponed' as 'Data::Postpone'.
 
+0.17   May 24, 2005
+  - Two killer bugs were discovered in 0.07 and so the entire module
+    was reimplemented using test-first development.
+
+    Devel::Cover was used to make sure all the code pathways are
+    covered. There are a few branches not followed but they are mostly in
+    areas that perl doesn't define execution order like the cleanup of
+    globals during global destruction.
+    
+    The undocumented ->Dump method produces lisp-like data. In scalar
+    or list context just returns its value, in void context it prints
+    it.
