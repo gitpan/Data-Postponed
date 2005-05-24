@@ -7,6 +7,7 @@ BEGIN {
     @ISA = 'Data::Postponed';
     *TRACE = *Data::Postponed::TRACE;
     *DEBUG = *Data::Postponed::DEBUG;
+    *PERLVER = \ &Data::Postponed::PERLVER;
     *assert = \ &Data::Postponed::assert;
     *isa = \ &UNIVERSAL::isa;
 }
@@ -39,7 +40,13 @@ sub _Finalize {
     
     Data::Postponed::Util::NoLonger->steal( $_[0], $$val );
     
-    # return $_[0] = $$val;
+    if ( PERLVER > 5.6 ) {
+	# There's some bug in 5.6.x where overwriting this caused
+	# values like '10' to appear to be '0'. I'm convinced its a
+	# memory scribbling problem and I haven't seen it on anything
+	# newer.
+	$_[0] = $$val;
+    }
     return $$val;
 }
 

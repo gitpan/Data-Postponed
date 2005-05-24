@@ -6,8 +6,9 @@ use vars ( '$VERSION', '@ISA', '@EXPORT_OK', '%EXPORT_TAGS',
 use Carp ('carp', 'croak');
 use Exporter;
 
-$VERSION = 0.17;
 BEGIN {
+    $VERSION = 0.18;
+
     # Generate DEBUG.
     if ( $ENV{DATA_POSTPONED_DEBUG} or $^D ) {
 	eval {
@@ -16,7 +17,6 @@ BEGIN {
 	};
 	if ( my $e = $@ ) {
 	    eval( 'sub DEBUG () { !!0 }; 1' );
-#	    carp __PACKAGE__ . " can't enable assertions: $@\n";
 	}
     }
     else {
@@ -38,6 +38,7 @@ BEGIN {
     }
     
     *isa = \ &UNIVERSAL::isa;
+    eval "sub PERLVER () { $] }";
 }
 
 ######################################################################
@@ -454,8 +455,12 @@ BEGIN {
 
 BEGIN {
     @FINALIZERS = ( '""', '0+', 'bool',
-		    '<>',
-		    '${}', '@{}', '%{}', '&{}', '*{}' );
+		    
+		    # 5.6.x+ added overloadable <> and various dereferencing 
+		    ( PERLVER > 5.005
+		      ? ( '<>',
+			  '${}', '@{}', '%{}', '&{}', '*{}' )
+		      : () ) );
     no strict 'refs';
     
     # conv
@@ -492,91 +497,94 @@ BEGIN {
 	!!$_;
     };
     
-    # iterators
-    *{'Data::Postponed::<>'}   = sub {
-	no strict 'refs';
-        local $_ = &{$_[0]->can( '_Finalize' )};
+    # These methods were not overloadable until after 5.5.x
+    if ( PERLVER > 5.005 ) {
+	# iterators
+	*{'Data::Postponed::<>'}   = sub {
+	    no strict 'refs';
+	    local $_ = &{$_[0]->can( '_Finalize' )};
+	    
+	    DEBUG and
+	      assert( ! isa( $_, __PACKAGE__ ), 
+		      "_Finalize( OBJ ), finalized" );
+	    
+	    return readline( ref()
+			     ? $_
+			     : do { no strict 'refs';
+				    caller() . "::$_" } );
+	};
 	
-	DEBUG and
-	  assert( ! isa( $_, __PACKAGE__ ), 
-		  "_Finalize( OBJ ), finalized" );
+	# dereferencing
+	*{'Data::Postponed::${}'}  = sub {
+	    no strict 'refs';
+	    local $_ = &{$_[0]->can( '_Finalize' )};
+	    
+	    DEBUG and
+	      assert( ! isa( $_, __PACKAGE__ ), 
+		      "_Finalize( OBJ ), finalized" );
+	    
+	    return( ref()
+		    ? $_
+		    : do { no strict 'refs';
+			   \${ caller() . "::$_" } } );
+	};
 	
-        return readline( ref()
-                         ? $_
-                         : do { no strict 'refs';
-                                caller() . "::$_" } );
-    };
-    
-    # dereferencing
-    *{'Data::Postponed::${}'}  = sub {
-	no strict 'refs';
-        local $_ = &{$_[0]->can( '_Finalize' )};
+	*{'Data::Postponed::@{}'}  = sub {
+	    no strict 'refs';
+	    local $_ = &{$_[0]->can( '_Finalize' )};
+	    
+	    DEBUG and
+	      assert( ! isa( $_, __PACKAGE__ ), 
+		      "_Finalize( OBJ ), finalized" );
+	    
+	    return( ref()
+		    ? $_
+		    : do { no strict 'refs';
+			   \@{ caller() . "::$_" } } );
+	};
 	
-	DEBUG and
-	  assert( ! isa( $_, __PACKAGE__ ), 
-		  "_Finalize( OBJ ), finalized" );
+	*{'Data::Postponed::%{}'}  = sub {
+	    no strict 'refs';
+	    local $_ = &{$_[0]->can( '_Finalize' )};
+	    
+	    DEBUG and
+	      assert( ! isa( $_, __PACKAGE__ ), 
+		      "_Finalize( OBJ ), finalized" );
+	    
+	    return( ref()
+		    ? $_
+		    : do { no strict 'refs';
+			   \%{ caller() . "::$_" } } );
+	};
 	
-        return( ref()
-                ? $_
-                : do { no strict 'refs';
-                       \${ caller() . "::$_" } } );
-    };
-
-    *{'Data::Postponed::@{}'}  = sub {
-	no strict 'refs';
-        local $_ = &{$_[0]->can( '_Finalize' )};
+	*{'Data::Postponed::&{}'}  = sub {
+	    no strict 'refs';
+	    local $_ = &{$_[0]->can( '_Finalize' )};
+	    
+	    DEBUG and
+	      assert( ! isa( $_, __PACKAGE__ ), 
+		      "_Finalize( OBJ ), finalized" );
+	    
+	    return( ref()
+		    ? $_
+		    : do{ no strict 'refs';
+			  \&{caller() . "::$_"} } );
+	};
 	
-	DEBUG and
-	  assert( ! isa( $_, __PACKAGE__ ), 
-		  "_Finalize( OBJ ), finalized" );
-	
-        return( ref()
-                ? $_
-                : do { no strict 'refs';
-                       \@{ caller() . "::$_" } } );
-    };
-
-    *{'Data::Postponed::%{}'}  = sub {
-	no strict 'refs';
-        local $_ = &{$_[0]->can( '_Finalize' )};
-	
-	DEBUG and
-	  assert( ! isa( $_, __PACKAGE__ ), 
-		  "_Finalize( OBJ ), finalized" );
-	
-        return( ref()
-                ? $_
-                : do { no strict 'refs';
-                       \%{ caller() . "::$_" } } );
-    };
-
-    *{'Data::Postponed::&{}'}  = sub {
-	no strict 'refs';
-        local $_ = &{$_[0]->can( '_Finalize' )};
-	
-	DEBUG and
-	  assert( ! isa( $_, __PACKAGE__ ), 
-		  "_Finalize( OBJ ), finalized" );
-	
-        return( ref()
-                ? $_
-                : do{ no strict 'refs';
-                      \&{caller() . "::$_"} } );
-    };
-
-    *{'Data::Postponed::*{}'}  = sub {
-	no strict 'refs';
-        local $_ = &{$_[0]->can( '_Finalize' )};
-	
-	DEBUG and
-	  assert( ! isa( $_, __PACKAGE__ ), 
-		  "_Finalize( OBJ ), finalized" );
-	
-        return( ref()
-                ? $_
-                : do { no strict 'refs';
-                       \*{caller() . "::$_" } } );
-    };
+	*{'Data::Postponed::*{}'}  = sub {
+	    no strict 'refs';
+	    local $_ = &{$_[0]->can( '_Finalize' )};
+	    
+	    DEBUG and
+	      assert( ! isa( $_, __PACKAGE__ ), 
+		      "_Finalize( OBJ ), finalized" );
+	    
+	    return( ref()
+		    ? $_
+		    : do { no strict 'refs';
+			   \*{caller() . "::$_" } } );
+	};
+    }
     
     if ( TRACE ) {
 	for my $operation ( @FINALIZERS ) {
@@ -932,6 +940,41 @@ C<%overload::ops> hash.
 =item Unary operations with assignment
 
 The C<mutator> methods from C<%overload::ops>.
+
+=back
+
+=head1 DEBUGGING
+
+=over 4
+
+=item Data::Postponed::Dump( EXPR )
+
+The function C<Data::Postponed::Dump> may be called on a
+Data::Postponed object / expression to produce a dump of the structure
+of a postponed object. It is pseudo-lisp.
+
+When called in void context, it prints its output to the currently
+selected filehandle, normally STDOUT.
+
+When called in scalar or list context, it returns its output as a
+string.
+
+=item DATA_POSTPONED_DEBUG
+
+C<Data::Postponed> enables assertions if the environment variable
+DATA_POSTPONED_DEBUG is true, if $^P is true, or if perl was invoked
+with the -d parameter.
+
+If the module L<Carp::Assert> cannot be loaded, assertions are not
+enabled.
+
+=item DATA_POSTPONED_TRACE
+
+C<Data::Postponed> uses L<Carp>::cluck() to report the execution and
+progress of the module.
+
+If the module L<Data::Dump::Streamer> can be loaded, some values will
+be dumped as well.
 
 =back
 

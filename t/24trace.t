@@ -15,7 +15,7 @@ open OUT, "> $outfile\0"
   or die "Couldn't open $outfile for writing: $!";
 
 {
-    local *STDERR = *OUT;
+    local $SIG{__WARN__} = sub { print OUT @_ };
     my $o = postpone_forever( 1 );
     $o = $o . 2;
     

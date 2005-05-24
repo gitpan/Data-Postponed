@@ -49,3 +49,14 @@ Revision history for Data-Postponed
     The undocumented ->Dump method produces lisp-like data. In scalar
     or list context just returns its value, in void context it prints
     it.
+
+0.18   May 24, 2005
+  - Found out why 5.005_04 doesn't work: dereferencing and iterators
+    aren't overloadable so the tests failed.
+  - Removed t/debug.tst from the MANIFEST so it will be removed from
+    the SIGNATURE so when it changes, it won't be an error.
+  - In Data::Postponed::Once and Data::Postponed::OnceOnly, attempt to
+    overwrite the object with the finalized value but only on recent
+    enough perls. Older stuff has a bug I don't fully comprehend yet.
+  - Added some compile-time conditional compilation so stuff that is
+    only applicable to 5.6+ will only be seen in those cases, etc.

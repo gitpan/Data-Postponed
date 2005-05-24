@@ -1,7 +1,6 @@
 #!perl
 use strict;
 use ExtUtils::MakeMaker;
-use 5.006;
 
 WriteMakefile
   (

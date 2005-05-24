@@ -29,5 +29,4 @@ t/40forever.t
 t/41once.t
 t/42onceonly.t
 t/data.txt
-t/debug.tst
 t/test

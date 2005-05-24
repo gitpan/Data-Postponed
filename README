@@ -127,6 +127,33 @@ Subclassing Data::Postponed
     Unary operations with assignment
         The "mutator" methods from %overload::ops.
 
+DEBUGGING
+    Data::Postponed::Dump( EXPR )
+        The function "Data::Postponed::Dump" may be called on a
+        Data::Postponed object / expression to produce a dump of the
+        structure of a postponed object. It is pseudo-lisp.
+
+        When called in void context, it prints its output to the currently
+        selected filehandle, normally STDOUT.
+
+        When called in scalar or list context, it returns its output as a
+        string.
+
+    DATA_POSTPONED_DEBUG
+        "Data::Postponed" enables assertions if the environment variable
+        DATA_POSTPONED_DEBUG is true, if $^P is true, or if perl was invoked
+        with the -d parameter.
+
+        If the module Carp::Assert cannot be loaded, assertions are not
+        enabled.
+
+    DATA_POSTPONED_TRACE
+        "Data::Postponed" uses Carp::cluck() to report the execution and
+        progress of the module.
+
+        If the module Data::Dump::Streamer can be loaded, some values will
+        be dumped as well.
+
 SEE ALSO
     This is really similar to the *Really* symbolic calculator from the
     overload documentation. This expands on that idea by adding the ::Once
