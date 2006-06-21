@@ -19,12 +19,12 @@ is( scalar( keys %Data::Postponed::Values ),
     0 );
 
 {
-    my $input = 10;
+    my $input = 11;
     my $expr = postpone_once $input;
     $input++;
     
     # Postponed value follows reference
-    cmp_ok( $expr, '==', 11, "Postpone ok" );
+    cmp_ok( $expr, '==', 12, "Postpone ok" );
 }
 
 is( scalar( keys %Data::Postponed::Objects ),
@@ -33,7 +33,7 @@ is( scalar( keys %Data::Postponed::Values ),
     0 );
 
 {
-    my $input = 10;
+    my $input = 13;
     my $expr = postpone_once $input;
 
     # Finalize $expr
@@ -41,7 +41,7 @@ is( scalar( keys %Data::Postponed::Values ),
     $input++;
     
     # Postponing stops following after finalization
-    cmp_ok( $expr, "==", 10, "Postponing stopped ok, direct" );
+    cmp_ok( $expr, "==", 13, "Postponing stopped ok, direct" );
 }
 
 is( scalar( keys %Data::Postponed::Objects ),
@@ -50,7 +50,7 @@ is( scalar( keys %Data::Postponed::Values ),
     0 );
 
 {
-    my $input = 10;
+    my $input = 14;
     my $expr = postpone_once $input;
 
     # Finalize $expr
@@ -58,5 +58,5 @@ is( scalar( keys %Data::Postponed::Values ),
     $input++;
 
     # Postponing stops following after finalization
-    cmp_ok( $expr, "==", 10, "Postponing stopped ok, indirect" );
+    cmp_ok( $expr, "==", 14, "Postponing stopped ok, indirect" );
 }

@@ -9,8 +9,10 @@ use Data::Postponed ( 'postpone_forever',
                       'postpone' );
 
 SKIP: {
+    local ($@,$!);
     skip "Test::Exception is required for these tests", 7*3
-      if ! eval "use Test::Exception; 1;";
+      if not( eval "use Test::Exception; 1"
+              and Data::Postponed::DEBUG );
     
     for my $func( 'postpone_forever',
 		  'postpone_once',

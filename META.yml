@@ -1,15 +1,13 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         Data-Postponed
-version:      0.18
-version_from: lib/Data/Postponed.pm
-installdirs:  site
-requires:
-    Carp:                          0
-    Exporter:                      0
-    overload:                      0
-    strict:                        0
-    vars:                          0
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.17
+--- #YAML:1.0
+name:                Data-Postponed
+version:             0.20
+abstract:            Delay the evaluation of expressions to allow post
+license:             unknown
+generated_by:        ExtUtils::MakeMaker version 6.30_02
+author:              "Joshua ben Jore" <jjore@cpan.org>
+distribution_type:   module
+requires:     
+    Scalar::Util:                  0
+meta-spec:
+    url: <http://module-build.sourceforge.net/META-spec-new.html>;
+    version: 1.1

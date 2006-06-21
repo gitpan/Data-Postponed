@@ -1,5 +1,5 @@
 This file contains message digests of all files listed in MANIFEST,
-signed via the Module::Signature module, version 0.44.
+signed via the Module::Signature module, version 0.54.
 
 To verify the content in this distribution, first make sure you have
 Module::Signature installed, then type:
@@ -16,13 +16,13 @@ Hash: SHA1
 
 SHA1 9cf8a058ce92d6ac33f7d7196699e730774ac058 Changes
 SHA1 86b7335db54bb73600001f78b5774eac430c807c MANIFEST
-SHA1 ef7e8fb955634690688e920c72c8d71ef0cdfaf8 META.yml
-SHA1 e58ee97da5d013b79e24420b664572a1e3067431 Makefile.PL
+SHA1 4445b9acc2b9d54a6c909b1fbfd16825e0e3c1de META.yml
+SHA1 ba9896b5b9949d5ef46522d272917581d11dc634 Makefile.PL
 SHA1 53f207a05046b84a79f9697a4cc7d859f02e448b README
-SHA1 8ae28a674b40e45687955e73e2643dba6ee6fa6d lib/Data/Postponed.pm
+SHA1 53416fc73624098aac269cc7a35e962472b47438 lib/Data/Postponed.pm
 SHA1 ad697f7e4e9e346482cbb2dfdf55b3e6b0d6f79e lib/Data/Postponed/Forever.pm
-SHA1 8e462f31019da36c76974d555663a56e6d5388a3 lib/Data/Postponed/Once.pm
-SHA1 cb22fdd258f72abd3f936f72d6be5165f1f9a3b1 lib/Data/Postponed/OnceOnly.pm
+SHA1 94009367b3a40ca13d53a7cac094c0e1dc763b0d lib/Data/Postponed/Once.pm
+SHA1 d5c38faf250652722b0a30e1303822b9c552a793 lib/Data/Postponed/OnceOnly.pm
 SHA1 8ce25a3f90369d3874ef35bf32a84825dfe18762 lib/Data/Postponed/Util/NoLonger.pm
 SHA1 eda945dfee61ec62e2b396531df059f3760564a2 lib/Data/Postponed/Util/ReadOnly/Array.pm
 SHA1 d437d76ec417ed5a0182d230266f18f95fd9fd33 lib/Data/Postponed/Util/ReadOnly/Scalar.pm
@@ -30,7 +30,7 @@ SHA1 e6fb7473239581c7ba91a4bfaec36abbbd00529d t/00signature.t
 SHA1 695f7f50926b1eec073ad55f5775b0b95c25c9ea t/01pod.t
 SHA1 d1f4bcf0112523a55f0ba4f0f234c7c7dbb5d8d7 t/10export.t
 SHA1 b2f11f7da88fac8c6f7c935a6bbb8b43706671de t/11isa.t
-SHA1 88d315547e81f7343bb8b7615e4381815f94a7eb t/12usage.t
+SHA1 d00e2065a6ce6923c6e188880dddbeeeed5faba1 t/12usage.t
 SHA1 34c71a931b4c378943ac04a9ee02f65dc917edae t/20dump.t
 SHA1 3f27b4884bfac4ce95db97b0c098e5daf332a94c t/21debug1.t
 SHA1 9526ad985c575623a3a1ac03163d4ba3f92ffb79 t/22debug2.t
@@ -41,14 +41,14 @@ SHA1 1d176fb604b6423167f28a17c779c208a67a94d2 t/31postpone.t
 SHA1 2322b2a6d23ab314e4b3344dd2001b6e314d4f5a t/32clone.t
 SHA1 917c8e6b1c8edbde2b47df3e3471879d9e313147 t/33finalize.t
 SHA1 d3c56dbc0fb5aa07231a84f0130d5ece43d173ea t/40forever.t
-SHA1 88799843862c0cf0ea3be7cc308cbc01f0cd30bd t/41once.t
+SHA1 373ab0593e9e7737f3cfdfda5ea62debb4f2d4bc t/41once.t
 SHA1 5f13f43546e3264491c2ab1353be0f54126a689c t/42onceonly.t
 SHA1 68d42249e72523fbe061ead657c00a5582489141 t/data.txt
 SHA1 36c7326af1380524586c8e2f114511e2f944ed11 t/test
 -----BEGIN PGP SIGNATURE-----
-Version: GnuPG v1.2.5 (GNU/Linux)
+Version: GnuPG v1.4.2.2 (GNU/Linux)
 
-iD8DBQFCk5Epejb/5debeXcRAmvmAKCUx0FlluH+ESOquUb2v+1tedwpYgCeK27w
-c02NoiB+RT4seeSCvhE0l3g=
-=VJSJ
+iD8DBQFEmbBHejb/5debeXcRAvzvAJ4jLW0ctRuJx0bklw8/ZljRTkcv+wCgxuIy
+GPTjy1nHZXCX9MnNoko3D5c=
+=W8di
 -----END PGP SIGNATURE-----

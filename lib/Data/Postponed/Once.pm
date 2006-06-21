@@ -1,51 +1,59 @@
 package Data::Postponed::Once;
 use strict;
-use vars ( '@ISA' );
+use vars ('@ISA');
 use Data::Postponed::Util::NoLonger;
+use Scalar::Util 'refaddr';
 
 BEGIN {
-    @ISA = 'Data::Postponed';
-    *TRACE = *Data::Postponed::TRACE;
-    *DEBUG = *Data::Postponed::DEBUG;
-    *PERLVER = \ &Data::Postponed::PERLVER;
-    *assert = \ &Data::Postponed::assert;
-    *isa = \ &UNIVERSAL::isa;
+    @ISA     = 'Data::Postponed';
+    *TRACE   = *Data::Postponed::TRACE;
+    *DEBUG   = *Data::Postponed::DEBUG;
+    *PERLVER = \&Data::Postponed::PERLVER;
+    *assert  = \&Data::Postponed::assert;
+    *isa     = \&UNIVERSAL::isa;
 }
 
 sub _Finalize {
-    TRACE and
-      warn "Data::Postponed::Once::_Finalize for " . overload::StrVal($_[0]) . "\n";
-    my $str = overload::StrVal( $_[0] );
-    DEBUG and
-      assert( exists $Data::Postponed::Objects{$str},
-	      "$str has a backend object" );
-    
-    my $data = $Data::Postponed::Objects{$str};
-    my $method = $_[0]->can( 'SUPER::_Finalize' );
-    my $val = \ $_[0]->$method( @_[ 1 .. $#_ ] );
+    TRACE
+        and warn "Data::Postponed::Once::_Finalize for "
+        . refaddr( $_[0] ) . "\n";
+    my $str = refaddr( $_[0] );
+    if (DEBUG) {
+        assert( exists $Data::Postponed::Objects{$str},
+            "$str has a backend object" );
+    }
+
+    my $data   = $Data::Postponed::Objects{$str};
+    my $method = $_[0]->can('SUPER::_Finalize');
+    my $val    = \$_[0]->$method( @_[ 1 .. $#_ ] );
     @$data = $val;
-    
+
     # Do my DESTROY work because now DESTROY is going to go somewhere
     # else and this data will be orphaned otherwise. If memory gets
     # re-used, then the same underlying data might even be visible to
     # another object. Yuck.
-    if ( DEBUG ) {
-	assert( ! exists $Data::Postponed::Values{$str},
-		"$str has no intermediate value pending" );
-	assert( exists $Data::Postponed::Objects{$str},
-		"$str still has a backend object" );
+    if (DEBUG) {
+        assert(
+            !exists $Data::Postponed::Values{$str},
+            "$str has no intermediate value pending"
+        );
+        assert(
+            exists $Data::Postponed::Objects{$str},
+            "$str still has a backend object"
+        );
     }
     delete $Data::Postponed::Values{$str};
     delete $Data::Postponed::Objects{$str};
-    
+
     Data::Postponed::Util::NoLonger->steal( $_[0], $$val );
-    
+
     if ( PERLVER > 5.6 ) {
-	# There's some bug in 5.6.x where overwriting this caused
-	# values like '10' to appear to be '0'. I'm convinced its a
-	# memory scribbling problem and I haven't seen it on anything
-	# newer.
-	$_[0] = $$val;
+
+        # There's some bug in 5.6.x where overwriting this caused
+        # values like '10' to appear to be '0'. I'm convinced its a
+        # memory scribbling problem and I haven't seen it on anything
+        # newer.
+        $_[0] = $$val;
     }
     return $$val;
 }
